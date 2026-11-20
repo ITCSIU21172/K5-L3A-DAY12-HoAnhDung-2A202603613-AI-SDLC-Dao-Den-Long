@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đảo Đèn Lồng - 3D AI SDLC Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #070913;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #fff;
+    }
+    #game-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* HUD */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .top-bar {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .status-group {
+      display: flex;
+      gap: 16px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      padding: 10px 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 200, 100, 0.25);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #fbd38d;
+      margin-bottom: 2px;
+    }
+
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .flame-icon {
+      color: #f6ad55;
+      text-shadow: 0 0 10px #ed8936;
+      animation: flamePulse 1.5s infinite alternate ease-in-out;
+    }
+
+    @keyframes flamePulse {
+      from { transform: scale(0.95); opacity: 0.85; }
+      to { transform: scale(1.1); opacity: 1; text-shadow: 0 0 16px #dd6b20; }
+    }
+
+    /* Minimap */
+    #minimap-container {
+      position: absolute;
+      top: 16px;
+      right: 20px;
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 215, 0, 0.4);
+      background: rgba(10, 15, 30, 0.8);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      overflow: hidden;
+    }
+    #minimap {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Interact banner */
+    #interact-prompt {
+      position: absolute;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, rgba(237, 137, 54, 0.9), rgba(221, 107, 32, 0.9));
+      color: #fff;
+      padding: 10px 24px;
+      border-radius: 30px;
+      font-size: 15px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+      box-shadow: 0 0 20px rgba(237, 137, 54, 0.6);
+      display: none;
+      animation: bounce 0.8s infinite alternate ease-in-out;
+    }
+
+    @keyframes bounce {
+      from { transform: translateX(-50%) translateY(0); }
+      to { transform: translateX(-50%) translateY(-6px); }
+    }
+
+    /* Controls bar at bottom */
+    .controls-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(8px);
+      padding: 8px 20px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      font-size: 13px;
+      color: #e2e8f0;
+      display: flex;
+      gap: 16px;
+    }
+    .key {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-weight: 600;
+      color: #fbd38d;
+    }
+
+    /* Modal */
+    #modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 8, 16, 0.85);
+      backdrop-filter: blur(10px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      pointer-events: auto;
+      z-index: 100;
+    }
+
+    .modal-card {
+      background: #1a202c;
+      border: 2px solid #ed8936;
+      border-radius: 20px;
+      padding: 36px 48px;
+      text-align: center;
+      max-width: 480px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(237, 137, 54, 0.3);
+      animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes modalPop {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-title {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #fbd38d, #ed8936);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .modal-desc {
+      font-size: 15px;
+      color: #cbd5e0;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .score-breakdown {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-bottom: 24px;
+      text-align: left;
+      font-size: 14px;
+      color: #e2e8f0;
+    }
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 6px 0;
+    }
+
+    .btn-play {
+      background: linear-gradient(135deg, #ed8936, #dd6b20);
+      color: #fff;
+      border: none;
+      padding: 12px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(221, 107, 32, 0.5);
+      transition: all 0.2s;
+    }
+    .btn-play:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(221, 107, 32, 0.7);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="hud">
+    <div class="top-bar">
+      <div class="status-group">
+        <div class="stat-item">
+          <div class="stat-label">Ngọn Lửa (HP)</div>
+          <div class="stat-value" id="hud-flames">
+            <span class="flame-icon">🔥</span>
+            <span class="flame-icon">🔥</span>
+            <span class="flame-icon">🔥</span>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Đom đóm mang</div>
+          <div class="stat-value" id="hud-motes" style="color: #ecc94b;">0 / 5</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Đèn Lớn Thắp</div>
+          <div class="stat-value" id="hud-lanterns" style="color: #68d391;">0 / 5</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Thời Gian</div>
+          <div class="stat-value" id="hud-time" style="color: #63b3ed;">180s</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Điểm Số</div>
+          <div class="stat-value" id="hud-score" style="color: #faf089;">0</div>
+        </div>
+      </div>
+
+      <div id="minimap-container">
+        <canvas id="minimap" width="130" height="130"></canvas>
+      </div>
+    </div>
+
+    <div id="interact-prompt">[E] Thắp Đèn Lớn (Nạp Đom Đóm)</div>
+
+    <div class="controls-bar">
+      <span><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> Di chuyển</span>
+      <span><span class="key">Space</span> Nhảy</span>
+      <span><span class="key">E</span> Thắp Đèn</span>
+      <span><span class="key">Q</span> / <span class="key">Chuột Phải</span> Tỏa Sáng</span>
+      <span><span class="key">Chuột</span> Xoay Camera</span>
+    </div>
+  </div>
+
+  <div id="modal">
+    <div class="modal-card">
+      <h1 class="modal-title" id="modal-title">ĐẢO ĐÈN LỒNG</h1>
+      <p class="modal-desc" id="modal-desc">
+        Bạn là <b>Mây</b>, người giữ đèn nhỏ tuổi đội nón lá. Hãy chạy khắp Đảo Bến thu thập đom đóm mang về thắp sáng 5 Đèn Lồng Lớn trước khi rạng đông, và né tránh Bóng Mực trong sương!
+      </p>
+      <div id="modal-stats" class="score-breakdown" style="display:none;"></div>
+      <button class="btn-play" id="btn-start">Bắt Đầu Chơi</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/client/game.js"></script>
+</body>
+</html>

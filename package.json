@@ -1,0 +1,25 @@
+{
+  "name": "dao-den-long",
+  "version": "1.0.0",
+  "description": "Game 3D Đảo Đèn Lồng - Day 12 AI SDLC",
+  "main": "src/headless.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node tests/run-all-tests.js",
+    "headless": "node src/headless.js"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "game",
+    "3d",
+    "threejs",
+    "ai-sdlc"
+  ],
+  "author": "Ho Anh Dung",
+  "license": "MIT"
+}

@@ -1,0 +1,6 @@
+node_modules/
+*.log
+tests/out_*.jsonl
+*.jsonl
+.DS_Store
+Thumbs.db
