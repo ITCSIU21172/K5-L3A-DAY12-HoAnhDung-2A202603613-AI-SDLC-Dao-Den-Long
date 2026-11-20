@@ -35,6 +35,96 @@
       background: var(--color-sky);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       color: var(--color-text);
+      font-size: 18px; /* Standardized min 18px at 1280x720 */
+    }
+
+    body.large-font {
+      font-size: 22.5px; /* 18px * 1.25 */
+    }
+    body.large-font .stat-val { font-size: 26px; }
+    body.large-font .timer-text { font-size: 32px; }
+    body.large-font .btn-action { font-size: 20px; padding: 14px 34px; }
+
+    body.reduce-motion * {
+      animation: none !important;
+      transition: none !important;
+    }
+
+    /* Subtitle & Visual Alerts Banner */
+    .subtitle-banner {
+      position: absolute;
+      bottom: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(14, 20, 48, 0.9);
+      border: 1px solid var(--color-gold);
+      padding: 10px 24px;
+      border-radius: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--color-text);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+      z-index: 60;
+      pointer-events: none;
+      text-align: center;
+      max-width: 80%;
+    }
+
+    /* Screen edge indicator arrow */
+    .edge-indicator {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      pointer-events: none;
+      z-index: 55;
+      display: none;
+      font-size: 24px;
+      text-shadow: 0 0 10px #ff5a5f;
+    }
+
+    /* Keybinds table in settings */
+    .keybind-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 15px;
+    }
+    .keybind-table td {
+      padding: 6px 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .keybind-btn {
+      background: #2a345c;
+      color: var(--color-gold);
+      border: 1px solid var(--color-gold);
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      min-width: 65px;
+    }
+    .keybind-btn.recording {
+      background: var(--color-danger);
+      color: #fff;
+      animation: timerPulse 0.6s infinite alternate;
+    }
+
+    /* Leaderboard table */
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 15px;
+      text-align: left;
+    }
+    .leaderboard-table th {
+      color: var(--color-gold);
+      border-bottom: 2px solid var(--color-gold);
+      padding: 8px 6px;
+    }
+    .leaderboard-table td {
+      padding: 8px 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     #game-canvas {
       width: 100%;
@@ -327,6 +417,10 @@
     <!-- Prompt -->
     <div id="interact-prompt">E — Nạp ánh sáng (0/10)</div>
 
+    <!-- Subtitle Banner & Edge Alert Indicator -->
+    <div id="subtitle-banner" class="subtitle-banner" style="display:none;"></div>
+    <div id="edge-alert-indicator" class="edge-indicator">▲</div>
+
     <!-- Bottom Center: Dynamic Firefly slots -->
     <div class="bottom-center">
       <span style="font-size: 11px; color: var(--color-gold); font-weight: bold;">TÚI ĐOM ĐÓM (<span id="motes-count-text">0</span> / <span id="motes-capacity-text">10</span>)</span>
@@ -358,7 +452,10 @@
       <p id="start-desc">
         Chào mừng đến với hành trình 3 Đêm của <b>Mây</b>! Hãy thu thập đom đóm, thắp lại các Đèn Lồng Lớn, sử dụng <b>Lướt (Shift)</b> và <b>Tỏa Sáng (Q)</b> để vượt qua Bóng Mực và Gió Lạc.
       </p>
-      <button class="btn-action" id="btn-start-game">Bắt Đầu Đêm 1</button>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button class="btn-action" id="btn-start-game">Bắt Đầu Đêm 1</button>
+        <button class="btn-action btn-secondary" id="btn-leaderboard-start">Bảng Xếp Hạng</button>
+      </div>
     </div>
   </div>
 
@@ -369,27 +466,97 @@
       <p>Trò chơi đang được tạm dừng.</p>
       <button class="btn-action" id="btn-resume">Tiếp Tục (Esc / P)</button>
       <button class="btn-action btn-secondary" id="btn-restart-night">Chơi Lại Đêm Này</button>
+      <button class="btn-action btn-secondary" id="btn-leaderboard-pause">Bảng Xếp Hạng</button>
       <button class="btn-action btn-secondary" id="btn-settings-open">Cài Đặt</button>
       <button class="btn-action btn-secondary" id="btn-to-menu">Về Menu Chính</button>
     </div>
   </div>
 
+  <!-- Leaderboard Modal -->
+  <div id="modal-leaderboard" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width: 600px;">
+      <h1>BẢNG XẾP HẠNG</h1>
+      <p style="margin-bottom: 10px;">Top 10 người chơi kiên cường nhất bảo vệ Đảo Đèn Lồng</p>
+      <div style="max-height: 280px; overflow-y: auto; margin-bottom: 20px;">
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tên</th>
+              <th>Điểm</th>
+              <th>Đêm Thắng</th>
+              <th>Thời Gian</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-tbody">
+            <tr><td colspan="5" style="text-align:center;">Đang tải...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <button class="btn-action" id="btn-leaderboard-close">Đóng</button>
+    </div>
+  </div>
+
+  <!-- Save Score Modal -->
+  <div id="modal-save-score" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <h1 id="save-score-title">LƯU ĐIỂM XẾP HẠNG</h1>
+      <p id="save-score-desc">Nhập tên của bạn để ghi danh vào bảng vàng bảo vệ hòn đảo!</p>
+      <div style="margin-bottom: 18px;">
+        <label style="font-size: 14px; display:block; margin-bottom: 8px;">Tên người chơi (3–12 ký tự [A-Za-z0-9_]):</label>
+        <input type="text" id="input-player-name" maxlength="12" placeholder="Ten_Nguoi_Choi" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--color-gold); background: #1a224a; color: #fff; font-size: 16px; font-weight: bold; text-align: center;">
+        <div id="save-score-error" style="color: var(--color-danger); font-size: 13px; margin-top: 6px; display: none;">Tên không hợp lệ (phải từ 3-12 ký tự [A-Za-z0-9_])</div>
+      </div>
+      <div style="display:flex; gap:12px; justify-content:center;">
+        <button class="btn-action" id="btn-save-score-submit">Lưu Điểm</button>
+        <button class="btn-action btn-secondary" id="btn-save-score-skip">Bỏ Qua</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Settings Modal -->
   <div id="modal-settings" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width: 580px; max-height: 85vh; overflow-y: auto;">
       <h1>CÀI ĐẶT</h1>
-      <div style="text-align: left; margin-bottom: 20px; font-size: 14px;">
+      <div style="text-align: left; margin-bottom: 20px; font-size: 15px;">
         <div style="margin-bottom: 14px;">
           <label>Âm lượng âm thanh:</label>
           <input type="range" id="setting-vol" min="0" max="1" step="0.05" value="0.7" style="width: 100%; margin-top: 6px;">
         </div>
-        <div>
+        <div style="margin-bottom: 14px;">
           <label>Độ nhạy chuột:</label>
           <input type="range" id="setting-sens" min="0.1" max="2" step="0.1" value="1.0" style="width: 100%; margin-top: 6px;">
         </div>
-        <div style="margin-top: 14px; display: flex; align-items: center; justify-content: space-between;">
+
+        <h3 style="color: var(--color-gold); font-size: 17px; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid var(--color-gold); padding-bottom: 4px;">ĐỔI PHÍM ĐIỀU KHIỂN (KEY REMAPPING)</h3>
+        <table class="keybind-table">
+          <tbody>
+            <tr><td>Tiến (Forward):</td><td style="text-align:right;"><button class="keybind-btn" data-action="forward">W</button></td></tr>
+            <tr><td>Lùi (Backward):</td><td style="text-align:right;"><button class="keybind-btn" data-action="backward">S</button></td></tr>
+            <tr><td>Trái (Left):</td><td style="text-align:right;"><button class="keybind-btn" data-action="left">A</button></td></tr>
+            <tr><td>Phải (Right):</td><td style="text-align:right;"><button class="keybind-btn" data-action="right">D</button></td></tr>
+            <tr><td>Nhảy (Jump):</td><td style="text-align:right;"><button class="keybind-btn" data-action="jump">Space</button></td></tr>
+            <tr><td>Lướt (Dash):</td><td style="text-align:right;"><button class="keybind-btn" data-action="dash">ShiftLeft</button></td></tr>
+            <tr><td>Tương tác / Nạp (Interact):</td><td style="text-align:right;"><button class="keybind-btn" data-action="interact">KeyE</button></td></tr>
+            <tr><td>Tỏa Sáng (Pulse):</td><td style="text-align:right;"><button class="keybind-btn" data-action="pulse">KeyQ</button></td></tr>
+            <tr><td>Tạm dừng (Pause):</td><td style="text-align:right;"><button class="keybind-btn" data-action="pause">Escape</button></td></tr>
+          </tbody>
+        </table>
+        <div id="key-conflict-warning" style="color: var(--color-danger); font-size: 13px; margin-top: 8px; display: none;">Cảnh báo: Trùng phím! Vui lòng chọn phím khác.</div>
+        <button id="btn-restore-defaults" class="keybind-btn" style="margin-top: 8px; width: 100%;">Khôi phục phím mặc định</button>
+
+        <h3 style="color: var(--color-gold); font-size: 17px; margin-top: 18px; margin-bottom: 8px; border-bottom: 1px solid var(--color-gold); padding-bottom: 4px;">DỄ TIẾP CẬN (ACCESSIBILITY)</h3>
+        <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between;">
           <label for="setting-colorblind">Chế độ mù màu (Colorblind Mode):</label>
           <input type="checkbox" id="setting-colorblind" style="width: 18px; height: 18px; cursor: pointer;">
+        </div>
+        <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between;">
+          <label for="setting-reduce-motion">Giảm chuyển động (Reduce Motion):</label>
+          <input type="checkbox" id="setting-reduce-motion" style="width: 18px; height: 18px; cursor: pointer;">
+        </div>
+        <div style="margin-top: 10px; display: flex; align-items: center; justify-content: space-between;">
+          <label for="setting-large-font">Cỡ chữ lớn (+25% Font Size):</label>
+          <input type="checkbox" id="setting-large-font" style="width: 18px; height: 18px; cursor: pointer;">
         </div>
       </div>
       <button class="btn-action" id="btn-settings-close">Lưu & Đóng</button>

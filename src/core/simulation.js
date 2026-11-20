@@ -89,6 +89,7 @@ export class Simulation {
     this.random_shades = options.random_shades !== false;
     this.random_drifters = options.random_drifters !== false;
     this.wind_enabled = options.wind_enabled !== undefined ? options.wind_enabled : this.map.windEnabled;
+    this.bench_mode = !!options.bench_mode;
 
     if (options.scenario) {
       this.applyScenario(options.scenario);
@@ -444,45 +445,47 @@ export class Simulation {
     }
 
     // Phase 3 Fuel Decay & Shade Drain
-    for (const l of this.lanterns) {
-      if (l.lit) {
-        // Natural decay: 1.0/s = 1 tick per tick
-        l.fuel_ticks -= 1;
+    if (!this.bench_mode) {
+      for (const l of this.lanterns) {
+        if (l.lit) {
+          // Natural decay: 1.0/s = 1 tick per tick
+          l.fuel_ticks -= 1;
 
-        // Count shades draining this lantern
-        for (const s of this.shades) {
-          if (s.state === 'drain' && s.target_lantern_id === l.id) {
-            // Drain 5.0/s = 5 ticks per tick
-            l.fuel_ticks -= 5;
-            s.drain_ticks = (s.drain_ticks || 0) + 1;
-            // Record fuel_drain event every 60 ticks while draining
-            if (s.drain_ticks % 60 === 0) {
-              this.currentEvents.push({
-                type: 'event',
-                tick: this.sim_tick,
-                name: 'fuel_drain',
-                data: {
-                  lantern_id: l.id,
-                  shade_id: s.id,
-                  fuel: round1(Math.max(0, l.fuel_ticks) / 60.0)
-                }
-              });
+          // Count shades draining this lantern
+          for (const s of this.shades) {
+            if (s.state === 'drain' && s.target_lantern_id === l.id) {
+              // Drain 5.0/s = 5 ticks per tick
+              l.fuel_ticks -= 5;
+              s.drain_ticks = (s.drain_ticks || 0) + 1;
+              // Record fuel_drain event every 60 ticks while draining
+              if (s.drain_ticks % 60 === 0) {
+                this.currentEvents.push({
+                  type: 'event',
+                  tick: this.sim_tick,
+                  name: 'fuel_drain',
+                  data: {
+                    lantern_id: l.id,
+                    shade_id: s.id,
+                    fuel: round1(Math.max(0, l.fuel_ticks) / 60.0)
+                  }
+                });
+              }
             }
           }
-        }
 
-        // Extinguish if fuel depleted
-        if (l.fuel_ticks <= 0) {
-          l.fuel_ticks = 0;
-          l.lit = false;
-          l.deposited = 0;
-          l.ever_lit = true;
-          this.currentEvents.push({
-            type: 'event',
-            tick: this.sim_tick,
-            name: 'lantern_out',
-            data: { lantern_id: l.id }
-          });
+          // Extinguish if fuel depleted
+          if (l.fuel_ticks <= 0) {
+            l.fuel_ticks = 0;
+            l.lit = false;
+            l.deposited = 0;
+            l.ever_lit = true;
+            this.currentEvents.push({
+              type: 'event',
+              tick: this.sim_tick,
+              name: 'lantern_out',
+              data: { lantern_id: l.id }
+            });
+          }
         }
       }
     }
@@ -669,7 +672,7 @@ export class Simulation {
     }
 
     // Step 4: Pick up motes and charms
-    if (this.player.fall_respawn_timer === 0) {
+    if (this.player.fall_respawn_timer === 0 && !this.bench_mode) {
       const capacity = this.getCapacity();
       for (let i = this.motes.length - 1; i >= 0; i--) {
         const m = this.motes[i];
@@ -1091,7 +1094,7 @@ export class Simulation {
     }
 
     // Step 9: Contact hits (Drifters first, then Shades)
-    if (this.player.fall_respawn_timer === 0) {
+    if (this.player.fall_respawn_timer === 0 && !this.bench_mode) {
       for (const d of this.drifters) {
         if (d.state === 'chase') {
           const dXZ = distXZ(this.player.pos, d.pos);
@@ -1184,53 +1187,58 @@ export class Simulation {
     }
 
     // Step 10: Spawn motes, Shades, Drifters on schedule
-    if (this.random_motes && this.sim_tick % 240 === 0 && this.motes.length < 30) {
-      const points = this.map.motePoints;
-      const emptyPts = points.filter(p => !this.motes.some(m => distXZ(m.pos, p) < 2.0));
-      if (emptyPts.length > 0) {
-        const pt = emptyPts[this.rng.int(0, emptyPts.length - 1)];
-        this.motes.push({
-          id: `M${this.moteIdCounter++}`,
-          pos: [round3(pt[0]), round3(pt[1]), round3(pt[2])],
-          kind: 'random',
-          ttl_ticks: null,
-          spawn_tick: this.sim_tick
-        });
+    if (!this.bench_mode) {
+      if (this.random_motes && this.sim_tick % 240 === 0 && this.motes.length < 30) {
+        const points = this.map.motePoints;
+        const emptyPts = points.filter(p => !this.motes.some(m => distXZ(m.pos, p) < 2.0));
+        if (emptyPts.length > 0) {
+          const pt = emptyPts[this.rng.int(0, emptyPts.length - 1)];
+          this.motes.push({
+            id: `M${this.moteIdCounter++}`,
+            pos: [round3(pt[0]), round3(pt[1]), round3(pt[2])],
+            kind: 'random',
+            ttl_ticks: null,
+            spawn_tick: this.sim_tick
+          });
+        }
       }
-    }
 
-    if (this.random_shades) {
-      const shadeMax = this.map.shadeMax;
-      const interval = this.map.shadeIntervalTicks;
+      if (this.random_shades) {
+        const shadeMax = this.map.shadeMax;
+        const interval = this.map.shadeIntervalTicks;
 
-      if (this.sim_tick === 300) {
-        this.spawnShade();
-        this.spawnShade();
-      } else if (this.sim_tick > 300 && (this.sim_tick - 300) % interval === 0) {
-        if (this.shades.length < shadeMax) {
+        if (this.sim_tick === 300) {
           this.spawnShade();
+          this.spawnShade();
+        } else if (this.sim_tick > 300 && (this.sim_tick - 300) % interval === 0) {
+          if (this.shades.length < shadeMax) {
+            this.spawnShade();
+          }
+        }
+      }
+
+      if (this.random_drifters && this.map.hasDrifters) {
+        if (this.sim_tick % 1200 === 0 && this.drifters.length < 2) {
+          const angle = this.rng.range(0, Math.PI * 2);
+          const r = this.night === 2 ? 35 : 42;
+          const x = round3(Math.cos(angle) * r);
+          const z = round3(Math.sin(angle) * r);
+          this.drifters.push({
+            id: `D${this.drifterIdCounter++}`,
+            pos: [x, 2.0, z],
+            state: 'idle',
+            stolen: 0,
+            flee_timer: 0,
+            drop_die_timer: 0
+          });
         }
       }
     }
 
-    if (this.random_drifters && this.map.hasDrifters) {
-      if (this.sim_tick % 1200 === 0 && this.drifters.length < 2) {
-        const angle = this.rng.range(0, Math.PI * 2);
-        const r = this.night === 2 ? 35 : 42;
-        const x = round3(Math.cos(angle) * r);
-        const z = round3(Math.sin(angle) * r);
-        this.drifters.push({
-          id: `D${this.drifterIdCounter++}`,
-          pos: [x, 2.0, z],
-          state: 'idle',
-          stolen: 0,
-          flee_timer: 0,
-          drop_die_timer: 0
-        });
-      }
-    }
-
     // Step 11: Check Win / Loss (Phase 3 Rules)
+    if (this.bench_mode) {
+      return this.currentEvents;
+    }
     // 1. Loss by Flames
     if (this.player.flames <= 0) {
       this.state = 'lost';

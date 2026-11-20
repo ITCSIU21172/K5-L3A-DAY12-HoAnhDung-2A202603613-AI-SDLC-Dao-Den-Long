@@ -2,6 +2,16 @@
 import fs from 'fs';
 import path from 'path';
 import { Simulation } from './core/simulation.js';
+import { exportLeaderboardToFile } from './core/leaderboard.js';
+
+// CLI support for --export-leaderboard
+if (process.argv.includes('--export-leaderboard')) {
+  const idx = process.argv.indexOf('--export-leaderboard');
+  const outPath = process.argv[idx + 1] || 'leaderboard_export.json';
+  exportLeaderboardToFile(outPath);
+  console.log(`Leaderboard exported to ${outPath}`);
+  process.exit(0);
+}
 
 function printUsageAndExit(msg = null, code = 1) {
   if (msg) console.error(`Error: ${msg}`);

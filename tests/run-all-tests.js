@@ -3,6 +3,7 @@ import { execSync } from 'child_process';
 import crypto from 'crypto';
 import { Simulation } from '../src/core/simulation.js';
 import { PRNG } from '../src/core/rng.js';
+import { addLeaderboardEntry, getLeaderboard, exportLeaderboardToFile } from '../src/core/leaderboard.js';
 
 let passed = 0;
 let failed = 0;
@@ -18,7 +19,7 @@ function assert(condition, message) {
   }
 }
 
-console.log('=== RUNNING UNIT & REGRESSION TESTS (CONTRACT V1.2) ===');
+console.log('=== RUNNING UNIT & REGRESSION TESTS (CONTRACT V1.3) ===');
 
 // Test 1: PRNG Determinism
 try {
@@ -407,6 +408,63 @@ try {
   assert(sim.state === 'playing', 'Game does NOT win early when all lanterns lit (no early win)');
   assert(!events.some(e => e.name === 'game_over'), 'No game_over event before dawn');
 } catch (e) {}
+
+// Test 24: Test Contract v1.3 Schema Compliance
+try {
+  const contract = JSON.parse(fs.readFileSync('game.contract.json', 'utf-8'));
+  assert(contract.contract_version === '1.3', 'Contract version is updated to 1.3');
+  assert(typeof contract.bench_cmd === 'string', 'bench_cmd is defined in game.contract.json');
+  assert(typeof contract.soak_cmd === 'string', 'soak_cmd is defined in game.contract.json');
+} catch (e) {
+  console.error(e);
+}
+
+// Test 25: Soak Test Verification (10 Nights & Output Schema)
+try {
+  assert(fs.existsSync('soak.json'), 'soak.json exists');
+  const soak = JSON.parse(fs.readFileSync('soak.json', 'utf-8'));
+  assert(soak.nights === 10, 'Soak test ran 10 consecutive nights');
+  assert(soak.crashes === 0, 'Soak test had 0 crashes');
+  assert(Array.isArray(soak.results) && soak.results.length === 10, 'Soak test results array has 10 entries');
+  assert(soak.mem_end_mb <= 1.2 * soak.mem_start_mb, 'Soak test memory growth <= 20% (mem_end_mb <= 1.2 * mem_start_mb)');
+} catch (e) {
+  console.error(e);
+}
+
+// Test 26: Benchmark Mode Verification (Schema & Thresholds)
+try {
+  assert(fs.existsSync('bench.json'), 'bench.json exists');
+  const bench = JSON.parse(fs.readFileSync('bench.json', 'utf-8'));
+  assert(bench.contract_version === '1.3', 'Benchmark output has contract_version = 1.3');
+  assert(bench.avg_fps >= 60.0, `Benchmark avg_fps >= 60.0 (got ${bench.avg_fps})`);
+  assert(bench.p1_low_fps >= 30.0, `Benchmark p1_low_fps >= 30.0 (got ${bench.p1_low_fps})`);
+  assert(bench.load_ms <= 10000, `Benchmark load_ms <= 10000ms (got ${bench.load_ms})`);
+  assert(bench.frames >= 1500, `Benchmark frame count >= 1500 for 30s (got ${bench.frames})`);
+  assert(typeof bench.frame_ms_p95 === 'number', 'Benchmark has frame_ms_p95 metric');
+} catch (e) {
+  console.error(e);
+}
+
+// Test 27: Leaderboard Operations & Export CLI
+try {
+  addLeaderboardEntry({ name: 'Player_A', score: 500, nights_won: 3, seed: 100 });
+  addLeaderboardEntry({ name: 'Player_B', score: 750, nights_won: 3, seed: 101 });
+  addLeaderboardEntry({ name: 'Player_C', score: 300, nights_won: 1, seed: 102 });
+
+  const entries = getLeaderboard();
+  assert(entries.length >= 3, 'Leaderboard has recorded entries');
+  assert(entries[0].score >= entries[1].score, 'Leaderboard entries sorted by score descending');
+
+  // Test CLI export
+  const expPath = 'tests/out_leaderboard_test.json';
+  execSync(`node src/headless.js --export-leaderboard ${expPath}`, { stdio: 'pipe' });
+  const exported = JSON.parse(fs.readFileSync(expPath, 'utf-8'));
+  assert(Array.isArray(exported.entries), 'Exported leaderboard has entries array');
+  assert(exported.entries[0].score >= exported.entries[1].score, 'Exported leaderboard entries are correctly sorted');
+  fs.unlinkSync(expPath);
+} catch (e) {
+  console.error(e);
+}
 
 console.log('\n================================');
 console.log(`TOTAL: ${passed + failed} | PASSED: ${passed} | FAILED: ${failed}`);

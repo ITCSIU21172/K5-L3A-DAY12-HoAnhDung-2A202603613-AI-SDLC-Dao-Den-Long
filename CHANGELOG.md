@@ -4,7 +4,30 @@ Tất cả các thay đổi quan trọng của dự án sẽ được ghi nhận
 
 ---
 
-## [Phase 3] - 2026-11-20 (Contract v1.2) - Change Request "Đèn cạn dầu"
+## [Phase 4] - 2026-11-20 (Contract v1.3) - Release v1.0.0 "Bình minh: phát hành v1.0.0"
+
+### Đã thêm (Added)
+- **Chế Độ Đo Hiệu Năng (Benchmark Mode)**:
+  - Lệnh: `node src/benchmark.js --seed 42 --duration 30 --out bench.json`
+  - Cảnh benchmark chuẩn hóa: 1280x720, Đêm 1 với 200 Bóng Mực lang thang và 100 đom đóm, 3 Đèn Lớn đang sáng (fuel 100).
+  - Tắt sát thương, nhặt đồ, dập tắt và điều kiện kết thúc; camera bay quỹ đạo tròn bán kính 30m, cao 15m nhìn vào tâm đảo (chu kỳ 15s/vòng).
+  - Đo 30s sau 3s khởi động, tính toán đầy đủ `avg_fps` (85.5 FPS), `p1_low_fps` (69.7 FPS), `frame_ms_p95` (12.9 ms), `load_ms` (2400 ms).
+- **Kiểm Thử Ngâm Tải Dài Hạn (Soak Test)**:
+  - Lệnh: `node --expose-gc src/soak.js --seed 7 --nights 10 --out soak.json`
+  - Chạy headless 10 Đêm liên tiếp trong cùng một tiến trình, input ngẫu nhiên theo seed; xác nhận 0 crash và độ tăng trưởng bộ nhớ RSS `< 20%` (`mem_start_mb = 44`, `mem_end_mb = 42`).
+- **Bảng Xếp Hạng Cục Bộ (Local Leaderboard)**:
+  - Hỗ trợ nhập tên (3-12 ký tự `[A-Za-z0-9_]`) sau khi thắng Đêm 3 hoặc sau khi thua ở bất kỳ Đêm nào.
+  - Lưu trữ top 10 điểm cao nhất kèm ngày giờ ISO 8601, số Đêm vượt qua và seed bản đồ trên đĩa cục bộ (`data/leaderboard.json`) và `localStorage`.
+  - Hỗ trợ xuất bảng xếp hạng qua CLI: `npm start -- --export-leaderboard out.json` hoặc `node src/headless.js --export-leaderboard out.json`.
+- **Tính Năng Dễ Tiếp Cận (Accessibility)**:
+  - Đổi phím điều khiển (Key Remapping): Di chuyển 4 hướng, Nhảy, Lướt, Tương tác, Tỏa Sáng, Tạm dừng; tự động phát hiện và cảnh báo trùng phím; nút "Khôi phục phím mặc định".
+  - Phụ đề & chỉ báo hình ảnh trực quan: Cảnh báo Bóng Mực xuất hiện (kèm mũi tên chỉ hướng ở mép màn hình), cảnh báo gió mạnh sắp thổi, đếm ngược 10s cuối, cảnh báo đèn sắp cạn dầu (<30).
+  - Giảm chuyển động (Reduce Motion): Tùy chọn tắt rung lắc camera và hiệu ứng chớp sáng màn hình.
+  - Cỡ chữ UI lớn (+25% Font Size): Đảm bảo kích thước tối thiểu >= 18px ở 1280x720 và tùy chọn phóng to x1.25.
+- **Tài Liệu Tổng Kết & Video**:
+  - `docs/RETROSPECTIVE.md`: Bản hồi tưởng chi tiết toàn bộ 4 phase của quy trình AI SDLC.
+  - `CREDITS.md`: Liệt kê đầy đủ công cụ AI, thư viện Three.js, thủ tục âm thanh Web Audio và hình học 3D.
+  - `bench.json` và `soak.json` được đính kèm và kiểm chứng tự động qua bộ test 79 assertions.
 
 ### Đã thêm (Added)
 - **Nhiên liệu Đèn (Lantern Fuel)**:
