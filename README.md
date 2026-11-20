@@ -3,7 +3,7 @@
 > **Học viên:** Hồ Anh Dũng · **MSSV:** 03613 · **Khóa 5 - L3A**  
 > **Video Demo:** [docs/demo/demo.mp4](docs/demo/demo.mp4)  
 > **Lab Board:** [Đảo Đèn Lồng Lab](https://claude.ai/artifact/Q1RYyv1dxjUczzCbd2ZnoW)  
-> **Phiên bản hiện tại:** Phase 2 (Ticket-02 — "Ba hòn đảo") · **Contract:** `v1.1` · **Tag:** `phase-2`
+> **Phiên bản hiện tại:** Phase 3 (Ticket-03 Change Request — "Đèn cạn dầu") · **Contract:** `v1.2` · **Tag:** `phase-3`
 
 ---
 
@@ -22,102 +22,86 @@ Mở trình duyệt tại: **http://localhost:3000**
 
 ---
 
-## 2. Hướng dẫn Điều khiển & Lối chơi (Phase 2)
+## 2. Hướng dẫn Điều khiển & Cơ chế Lối chơi (Phase 3 - Contract v1.2)
 
 - **Di chuyển:** Phím `W`, `A`, `S`, `D` hoặc các phím mũi tên.
 - **Xoay Camera 3D:** Giữ chuột trái và di chuột để xoay góc nhìn.
 - **Nhảy:** Phím `Space` (vận tốc Y 7.0 m/s, trọng lực -20 m/s², chỉ nhảy khi chạm đất).
-- **Lướt (Dash - Mới):** Phím `Shift` hoặc `F`. Lướt 14 m/s trong 0.2s (12 ticks), hồi chiêu 1.5s (90 ticks). Lướt trên không giữ nguyên cao độ Y.
-- **Thắp Đèn Lớn:** Phím `E` khi đứng gần đèn (< 2m). Mỗi đèn cần 10 đom đóm để thắp sáng (có thể nạp nhiều lần). Khi đèn sáng, tạo vùng an toàn 6m chặn và đẩy Bóng Mực ra mép.
-- **Tỏa Sáng (Pulse):** Phím `Q` hoặc `Chuột Phải`. Tiêu tốn 3 đom đóm, bán kính 3D 5m, làm choáng Bóng Mực trong 2s (120 ticks) và đẩy lùi 4m. Nếu đánh trúng Gió Lạc đang đuổi, xua đuổi nó; nếu trúng lúc nó đang tẩu thoát mang đồ, nó sẽ rơi lại toàn bộ đom đóm.
-- **Tạm dừng (Pause - Mới):** Phím `Esc` hoặc `P` để mở menu tạm dừng (Tiếp tục, Chơi lại Đêm, Cài đặt âm lượng/chuột, Về menu).
+- **Lướt (Dash):** Phím `Shift` hoặc `F`. Lướt 14 m/s trong 0.2s (12 ticks), hồi chiêu 1.5s (90 ticks).
+- **Tương tác Đèn (E):**
+  - **Thắp lần đầu:** Cần 10 đom đóm, tạo vùng an toàn 6m, cộng **+100 điểm**, tăng sức chứa túi `+2`.
+  - **Thắp lại:** Đèn đã tắt chỉ cần **5 đom đóm** để thắp lại, cộng **+40 điểm**, tăng sức chứa túi `+2`.
+  - **Châm dầu:** Đèn đang sáng tự tiêu hao 1.0 dầu/giây. Bấm `E` để châm thêm dầu (+10 dầu/đom đóm), cộng **+5 điểm** mỗi đom đóm nạp.
+- **Nhiên liệu & Bóng Mực Hút Dầu (Mới):**
+  - Khi đèn có `fuel < 30`, đèn mất vùng an toàn và bắt đầu nhấp nháy 1 Hz.
+  - Bóng Mực trạng thái lang thang (`wander`) sẽ tìm tới đèn yếu và chuyển sang trạng thái `drain` (hút 5.0 dầu/giây).
+  - Khi châm dầu lên `>= 30`, vùng an toàn được phục hồi và đẩy toàn bộ bóng mực ra mép 6m trong 30 tick.
+- **Tỏa Sáng (Pulse):** Phím `Q` hoặc `Chuột Phải`. Tiêu tốn 3 đom đóm, bán kính 3D 5m. Làm choáng Bóng Mực trong 120 tick và đẩy lùi 4m. Nếu ngắt Bóng Mực đang hút dầu (`drain`), cộng thưởng **+15 điểm** (thay vì +5).
+- **Sức chứa túi đom đóm tăng dần (Dynamic Capacity):** Khởi điểm 10, tăng +2 mỗi lần thắp thành công (tối đa 20 đom đóm).
+- **Chế độ Mù Màu (Colorblind Mode):** Bật/tắt trong Cài đặt (Esc/P). Mắt Bóng Mực chuyển màu `#00B3FF`, cảnh báo màu trắng với ⚠, đèn tắt dẹt 20%.
 
 ---
 
-## 3. Hành Trình 3 Đêm (Phase 2 Maps)
+## 3. Điều Kiện Thắng / Thua Mới (Contract v1.2)
 
-1. **Đêm 1 — Đảo Bến:** Đảo tròn r=40m, 5 Đèn Lớn, 20 đom đóm khởi điểm, Bóng Mực sinh r=37m (thời lượng 300s).
-2. **Đêm 2 — Đảo Cau (Mới):** Hai đảo tròn r=28m (Đảo A và Đảo B) nối bằng cầu tre x ∈ [26, 44]. Hai bục nhảy (vy=14 m/s, v_ngang=24 m/s) phóng qua lại giữa hai đảo. Có 6 Đèn Lớn, Bùa Gió trên cầu tre, và xuất hiện quái vật Gió Lạc (thời lượng 330s).
-3. **Đêm 3 — Đảo Chuông (Mới):** Đảo tròn r=45m gồm 3 tầng (Tầng 0: Y=0, Tầng 1: Y=3, Tầng 2: Y=6). Bục nhảy phóng lên Tầng 2, có Tháp Chuông ở đỉnh, 7 Đèn Lớn, Gió Lạc, 2 Bùa Gió và các cơn gió mạnh thổi mỗi 30s (thời lượng 360s).
-
----
-
-## 4. Cách Tính Điểm Chuẩn Hóa
-
-- Nạp mỗi đom đóm vào đèn: **+10 điểm**
-- Thắp sáng mỗi Đèn Lớn: **+100 điểm**
-- Làm choáng Bóng Mực bằng Tỏa Sáng: **+5 điểm** (mỗi con mỗi lần)
-- Thưởng khi chiến thắng Đêm:
-  - **+2 điểm** cho mỗi giây thời gian còn lại (`floor(giây) × 2`).
-  - **+50 điểm** cho mỗi Ngọn Lửa (HP) còn lại.
-- **Tổng điểm game** là tổng điểm của các Đêm đã chiến thắng. Khi thắng Đêm 3, màn hình Bình Minh sẽ vinh danh tổng điểm.
+- **Không còn thắng sớm:** Thắp đủ đèn không kết thúc Đêm, người chơi phải giữ đảo sáng tới bình minh!
+- **Thắng (`dawn_survived`):** Sống sót khi hết giờ (`time_left_s <= 0`) và số đèn đang sáng đạt tỷ lệ `>= 60%` tổng số đèn:
+  - **Đêm 1 (Đảo Bến):** Cần tối thiểu **3 / 5** đèn sáng (thời lượng 240s).
+  - **Đêm 2 (Đảo Cau):** Cần tối thiểu **4 / 6** đèn sáng (thời lượng 270s).
+  - **Đêm 3 (Đảo Chuông):** Cần tối thiểu **5 / 7** đèn sáng (thời lượng 300s).
+- **Thua:**
+  - Hết Ngọn Lửa (`flames <= 0`) ngay lập tức (`reason: "no_flames"`).
+  - Hết giờ mà số đèn sáng dưới ngưỡng quy định (`reason: "dawn"`).
+- **Điểm thắng Bình Minh:**
+  - `+50 + floor(fuel)` cho mỗi đèn đang sáng tại tick cuối.
+  - `+50` cho mỗi Ngọn Lửa còn lại.
 
 ---
 
-## 5. Chế độ Headless & Test Contract v1.1
+## 4. Chế độ Headless & Test Contract v1.2
 
-Game tích hợp bộ mô phỏng logic độc lập không cần GPU/cửa sổ, tuân thủ 100% Test Contract v1.1:
+Game tích hợp bộ mô phỏng logic độc lập không cần GPU/cửa sổ, tuân thủ 100% Test Contract v1.2:
 
 ```bash
-# Chạy headless cho Đêm 1:
-node src/headless.js --seed 42 --night 1 --ticks 180 --out output.jsonl
-
-# Chạy headless cho Đêm 2 hoặc Đêm 3:
-node src/headless.js --seed 42 --night 2 --ticks 240 --out output.jsonl
-node src/headless.js --seed 42 --night 3 --ticks 300 --out output.jsonl
-
-# Chạy với scenario và inputs:
-node src/headless.js --seed 42 --night 2 --scenario tests/scenarios/scenario_charm.json --inputs tests/scenarios/inputs_charm.json --ticks 20 --out output.jsonl
-```
-
-### Chạy toàn bộ bộ kiểm thử tự động
-```bash
+# Chạy toàn bộ 60 test tự động và regression
 npm test
+
+# Chạy mô phỏng Headless xuất JSONL
+node src/headless.js --seed 42 --night 1 --ticks 600 --out output.jsonl
+node src/headless.js --seed 42 --night 1 --scenario tests/scenarios/scenario_fuel_decay.json --ticks 60 --out decay.jsonl
 ```
-Bộ test bao gồm **39 bài kiểm tra tự động**:
-- Kiểm tra tính tất định 100% (cùng seed cho mã băm SHA256 trùng khớp từng byte trên Đêm 1 và Đêm 2).
-- Kiểm tra toàn diện cơ chế Lướt (Dash), Nhảy, Bục nhảy, Bùa Gió, Gió Lạc, Rơi khỏi đảo và Hồi sinh.
-- Kiểm tra mã thoát lỗi `2` khi file scenario/inputs sai định dạng.
-- **Benchmark hiệu năng:** 21,600 ticks hoàn thành trong **0.23 giây** (vượt xa chỉ tiêu <= 30s của contract).
+
+- **Tất định 100% (Byte-for-byte Determinism):** Cùng seed, scenario và inputs đảm bảo sinh ra output JSONL có mã băm SHA256 trùng khớp hoàn toàn.
+- **Hiệu năng:** Mô phỏng 21,600 ticks trong **0.22 giây** (vượt xa mục tiêu <= 30 giây).
+- **Mã lỗi exit code 2:** Bắt buộc thoát với mã lỗi `2` khi scenario hoặc inputs sai schema.
 
 ---
 
-## 6. Sáng Tạo Của Tôi (My Creativity)
-
-Tuân thủ nguyên tắc không làm thay đổi hay ảnh hưởng đến Test Contract:
-1. **Thiết kế nhân vật Mây mang bản sắc Việt Nam:** Mây đội nón lá tre vàng, thắt khăn đỏ truyền thống (`#C8102E`), áo nâu nhạt (`#E8E2D0`), đèn lồng nhỏ đung đưa theo chuyển động.
-2. **Minimap Radar thời gian thực:** Bản đồ thu nhỏ góc trên bên phải cập nhật động cho cả Đảo Bến, Đảo Cau (2 đảo nối cầu) và Đảo Chuông (3 tầng).
-3. **Mũi tên định hướng thông minh:** Mũi tên viền vàng xoay quanh mép màn hình chỉ trực tiếp về phía Đèn Lớn chưa thắp gần nhất khi đèn nằm ngoài góc nhìn.
-4. **Bộ tổng hợp âm thanh đa tần (Web Audio API):** Âm thanh procedural riêng biệt cho lướt (tiếng vút gió), nhảy, nhặt đom đóm, chuông khánh đồng ngân vang khi thắp đèn, tiếng rít của Gió Lạc.
-5. **Cài đặt cá nhân hóa:** Tùy chỉnh âm lượng và độ nhạy chuột được lưu tự động trong `localStorage`.
-
----
-
-## 7. Cấu Trúc Thư Mục
+## 5. Cấu trúc Thư mục
 
 ```text
-├── package.json               # Cấu hình dự án và scripts (start, test, headless)
-├── game.contract.json         # Khai báo Test Contract v1.1 và tuning parameters
-├── server.js                  # Máy chủ HTTP phục vụ Web 3D
-├── index.html                 # Giao diện chính, HUD v1.1, bảng màu chuẩn
-├── AGENTS.md                  # Hướng dẫn quy chuẩn cho Agent (Phase 2)
-├── CREDITS.md                 # Ghi nhận bản quyền và thư viện
-├── LICENSE                    # Giấy phép MIT
-├── .agents/
-│   └── skills/verification.md # Kỹ năng kiểm chứng tự động Phase 2
+├── game.contract.json          # Đặc tả chuẩn Test Contract v1.2
+├── AGENTS.md                   # Chỉ dẫn quy ước và kiến trúc cho AI Agent
+├── CHANGELOG.md                # Lịch sử thay đổi qua từng Phase
+├── docs/
+│   ├── notes/
+│   │   ├── adr-phase-3-fuel-system.md  # Architectural Decision Record (ADR-002)
+│   │   └── phase-3-spec-assumptions.md # Đặc tả kỹ thuật & giả định
+│   └── proof/
+│       ├── phase-1-proof.md    # Bằng chứng kiểm thử Phase 1
+│       ├── phase-2-proof.md    # Bằng chứng kiểm thử Phase 2
+│       └── phase-3-proof.md    # Bằng chứng kiểm thử Phase 3 (60/60 pass)
 ├── src/
-│   ├── core/                  # Engine logic mô phỏng thuần túy (Headless 60Hz)
-│   │   ├── rng.js             # Seeded PRNG (Mulberry32) tất định
-│   │   ├── constants.js       # Tham số chuẩn & bản đồ 3 Đêm (Đảo Bến, Đảo Cau, Đảo Chuông)
-│   │   └── simulation.js      # Mô phỏng 12 bước / tick, vật lý nhảy/lướt/bục nhảy/gió, thực thể
-│   ├── client/                # Giao diện hiển thị Three.js & âm thanh
-│   │   ├── game.js            # Khởi tạo 3D cho 3 Đêm, camera, kết nối core, HUD v1.1
-│   │   └── audio.js           # Bộ tổng hợp âm thanh Web Audio (dash, jump, charm, hit, win...)
-│   └── headless.js            # CLI runner cho Test Contract v1.1
-├── tests/
-│   ├── run-all-tests.js       # Suite kiểm thử tự động (39 bài test)
-│   └── scenarios/             # Các kịch bản mẫu (pickup, deposit, pulse, dash, charm, drifter, pause...)
-└── docs/
-    ├── notes/                 # Tiêu chí nghiệm thu, nhật ký AI và retro
-    └── proof/                 # Bằng chứng kiểm chứng ma trận yêu cầu Phase 2
+│   ├── core/
+│   │   ├── rng.js              # PRNG LCG tất định 100%
+│   │   ├── constants.js        # Hằng số chuẩn hóa & cấu hình bản đồ 3 Đêm
+│   │   └── simulation.js       # Bộ mô phỏng 60 tick/s, thứ tự 12 bước
+│   ├── client/
+│   │   ├── game.js             # Three.js 3D WebGL renderer & logic kết nối
+│   │   └── audio.js            # Web Audio API tổng hợp âm thanh thủ tục
+│   ├── headless.js             # CLI chạy headless xuất JSONL
+│   └── server.js               # HTTP static server phục vụ game
+└── tests/
+    ├── run-all-tests.js        # Test runner (60 test assertions)
+    └── scenarios/              # Test scenarios chuẩn hóa cho Contract v1.2
 ```

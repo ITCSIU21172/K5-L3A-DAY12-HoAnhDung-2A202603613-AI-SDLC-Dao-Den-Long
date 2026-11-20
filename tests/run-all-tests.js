@@ -18,7 +18,7 @@ function assert(condition, message) {
   }
 }
 
-console.log('=== RUNNING UNIT & REGRESSION TESTS (CONTRACT V1.1) ===');
+console.log('=== RUNNING UNIT & REGRESSION TESTS (CONTRACT V1.2) ===');
 
 // Test 1: PRNG Determinism
 try {
@@ -280,6 +280,133 @@ try {
 } catch (e) {
   console.error(e);
 }
+
+// Test 17: Phase 3 Fuel Decay and Extinguish (lantern_out)
+try {
+  const outPath = 'tests/out_decay.jsonl';
+  execSync('node src/headless.js --seed 42 --night 1 --scenario tests/scenarios/scenario_fuel_decay.json --ticks 35 --out tests/out_decay.jsonl --snapshot-every 1', { stdio: 'pipe' });
+  const records = fs.readFileSync(outPath, 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+  const snapshots = records.filter(r => r.type === 'snapshot');
+  const lastSnap = snapshots[snapshots.length - 1];
+  const l1 = lastSnap.lanterns.find(l => l.id === 'L1');
+  assert(l1.lit === false, 'Lantern L1 extinguished after fuel reached 0');
+  assert(l1.ever_lit === true, 'Lantern L1 has ever_lit = true');
+  const events = records.filter(r => r.type === 'event');
+  assert(events.some(e => e.name === 'lantern_out'), 'lantern_out event emitted');
+  fs.unlinkSync(outPath);
+} catch (e) {
+  console.error(e);
+}
+
+// Test 18: Phase 3 Refuel Mechanic & refuel event
+try {
+  const outPath = 'tests/out_refuel.jsonl';
+  execSync('node src/headless.js --seed 42 --night 1 --scenario tests/scenarios/scenario_refuel.json --inputs tests/scenarios/inputs_refuel.json --ticks 2 --out tests/out_refuel.jsonl --snapshot-every 1', { stdio: 'pipe' });
+  const records = fs.readFileSync(outPath, 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+  const snapshots = records.filter(r => r.type === 'snapshot');
+  const snap1 = snapshots.find(s => s.tick === 1);
+  const l1 = snap1.lanterns.find(l => l.id === 'L1');
+  assert(l1.fuel >= 99.9, 'Lantern refueled up to 100 fuel');
+  assert(snap1.player.carried === 1, 'Player used 2 motes to refuel, 1 left');
+  assert(snap1.score === 10, 'Refueling 2 motes gave 10 points (5/mote)');
+  fs.unlinkSync(outPath);
+} catch (e) {
+  console.error(e);
+}
+
+// Test 19: Phase 3 Relight Mechanic (costs 5 motes, relight: true, +40 score)
+try {
+  const outPath = 'tests/out_relight.jsonl';
+  execSync('node src/headless.js --seed 42 --night 1 --scenario tests/scenarios/scenario_relight.json --inputs tests/scenarios/inputs_relight.json --ticks 2 --out tests/out_relight.jsonl --snapshot-every 1', { stdio: 'pipe' });
+  const records = fs.readFileSync(outPath, 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+  const snapshots = records.filter(r => r.type === 'snapshot');
+  const snap1 = snapshots.find(s => s.tick === 1);
+  const l1 = snap1.lanterns.find(l => l.id === 'L1');
+  assert(l1.lit === true, 'Lantern L1 successfully relit');
+  assert(l1.relit_count === 1, 'Lantern L1 relit_count is 1');
+  assert(snap1.player.carried === 5, 'Relighting consumed 5 motes (10 - 5 = 5)');
+  assert(snap1.score === 65, 'Relight score awarded 25 (5*5 deposit) + 40 (relight) = 65');
+  assert(snap1.player.capacity === 12, 'Dynamic capacity increased to 12 (10 + 2*1)');
+  fs.unlinkSync(outPath);
+} catch (e) {
+  console.error(e);
+}
+
+// Test 20: Phase 3 Shade Drain on Weak Lantern (fuel < 30)
+try {
+  const outPath = 'tests/out_drain.jsonl';
+  execSync('node src/headless.js --seed 42 --night 1 --scenario tests/scenarios/scenario_shade_drain.json --ticks 65 --out tests/out_drain.jsonl --snapshot-every 10', { stdio: 'pipe' });
+  const records = fs.readFileSync(outPath, 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+  const snapshots = records.filter(r => r.type === 'snapshot');
+  const snapEnd = snapshots[snapshots.length - 1];
+  const shade = snapEnd.shades.find(s => s.id === 'S1');
+  assert(shade.state === 'drain', 'Shade S1 entered drain state at weak lantern');
+  const events = records.filter(r => r.type === 'event');
+  assert(events.some(e => e.name === 'fuel_drain'), 'fuel_drain event emitted');
+  fs.unlinkSync(outPath);
+} catch (e) {
+  console.error(e);
+}
+
+// Test 21: Phase 3 Pulse on Draining Shade (+15 score)
+try {
+  const sim = new Simulation({
+    seed: 110,
+    night: 1,
+    random_motes: false,
+    random_shades: false,
+    scenario: {
+      player: { pos: [10, 0, 1], carried: 5, flames: 3 },
+      shades: [{ id: 'S1', pos: [10, 0, 0], state: 'drain', target_lantern_id: 'L1' }],
+      lanterns: [{ id: 'L1', pos: [10, 0, 0], lit: true, fuel: 20.0 }]
+    }
+  });
+  sim.setInput({ pulse: true });
+  const events = sim.step();
+  assert(events.some(e => e.name === 'pulse'), 'Pulse event fired on draining shade');
+  assert(sim.score === 15, 'Pulse on draining shade awarded +15 points');
+  assert(sim.shades[0].state === 'stunned', 'Draining shade stunned');
+} catch (e) {}
+
+// Test 22: Phase 3 Dawn Survival Win (Contract v1.2)
+try {
+  const outPath = 'tests/out_dawn_win.jsonl';
+  execSync('node src/headless.js --seed 42 --night 1 --scenario tests/scenarios/scenario_dawn_win.json --ticks 5 --out tests/out_dawn_win.jsonl --snapshot-every 1', { stdio: 'pipe' });
+  const records = fs.readFileSync(outPath, 'utf-8').trim().split('\n').map(l => JSON.parse(l));
+  const snapshots = records.filter(r => r.type === 'snapshot');
+  const snapEnd = snapshots[snapshots.length - 1];
+  assert(snapEnd.state === 'won', 'Game state won at dawn with 3/5 lanterns lit');
+  assert(snapEnd.time_left_s === 0, 'Dawn reached (time_left_s = 0)');
+  const events = records.filter(r => r.type === 'event');
+  assert(events.some(e => e.name === 'game_over' && e.data.reason === 'dawn_survived'), 'game_over reason is dawn_survived');
+  fs.unlinkSync(outPath);
+} catch (e) {
+  console.error(e);
+}
+
+// Test 23: Phase 3 No Early Win when All Lit
+try {
+  const sim = new Simulation({
+    seed: 111,
+    night: 1,
+    random_motes: false,
+    random_shades: false,
+    scenario: {
+      player: { pos: [0, 0, 0], carried: 0, flames: 3 },
+      lanterns: [
+        { id: 'L1', pos: [0, 0, 10], lit: true, fuel: 100 },
+        { id: 'L2', pos: [0, 0, 20], lit: true, fuel: 100 },
+        { id: 'L3', pos: [0, 0, 30], lit: true, fuel: 100 },
+        { id: 'L4', pos: [0, 0, 40], lit: true, fuel: 100 },
+        { id: 'L5', pos: [0, 0, 50], lit: true, fuel: 100 }
+      ],
+      time_left_s: 200
+    }
+  });
+  const events = sim.step();
+  assert(sim.state === 'playing', 'Game does NOT win early when all lanterns lit (no early win)');
+  assert(!events.some(e => e.name === 'game_over'), 'No game_over event before dawn');
+} catch (e) {}
 
 console.log('\n================================');
 console.log(`TOTAL: ${passed + failed} | PASSED: ${passed} | FAILED: ${failed}`);
