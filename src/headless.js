@@ -6,7 +6,7 @@ import { Simulation } from './core/simulation.js';
 function printUsageAndExit(msg = null, code = 1) {
   if (msg) console.error(`Error: ${msg}`);
   console.error(
-    'Usage: node src/headless.js --seed <int> --night 1 [--scenario <file.json>] [--inputs <file.json>] --ticks <int> --out <file.jsonl> [--snapshot-every <int>]'
+    'Usage: node src/headless.js --seed <int> --night <1|2|3> [--scenario <file.json>] [--inputs <file.json>] --ticks <int> --out <file.jsonl> [--snapshot-every <int>]'
   );
   process.exit(code);
 }
@@ -29,7 +29,9 @@ function parseArgs(args) {
       if (isNaN(options.seed)) printUsageAndExit('Invalid seed value', 1);
     } else if (arg === '--night') {
       options.night = parseInt(args[++i], 10);
-      if (isNaN(options.night)) printUsageAndExit('Invalid night value', 1);
+      if (isNaN(options.night) || ![1, 2, 3].includes(options.night)) {
+        printUsageAndExit('Invalid night value (must be 1, 2, or 3)', 1);
+      }
     } else if (arg === '--scenario') {
       options.scenarioPath = args[++i];
     } else if (arg === '--inputs') {
@@ -105,6 +107,14 @@ function validateScenario(scenarioData) {
     console.error('Scenario "shades" must be an array');
     process.exit(2);
   }
+  if (scenarioData.drifters && !Array.isArray(scenarioData.drifters)) {
+    console.error('Scenario "drifters" must be an array');
+    process.exit(2);
+  }
+  if (scenarioData.charms && !Array.isArray(scenarioData.charms)) {
+    console.error('Scenario "charms" must be an array');
+    process.exit(2);
+  }
   if (scenarioData.lanterns && !Array.isArray(scenarioData.lanterns)) {
     console.error('Scenario "lanterns" must be an array');
     process.exit(2);
@@ -126,7 +136,6 @@ function main() {
     validateInputs(inputs);
   }
 
-  // Load contract tuning if available
   let tuning = null;
   const contractPath = path.resolve(process.cwd(), 'game.contract.json');
   if (fs.existsSync(contractPath)) {
@@ -147,7 +156,7 @@ function main() {
 
   const outLines = [];
 
-  // Snapshot at tick 0 (state after scenario setup, before applying input)
+  // Snapshot at tick 0
   outLines.push(JSON.stringify(sim.getSnapshot()));
 
   // Map inputs by tick
@@ -160,31 +169,25 @@ function main() {
 
   const targetTicks = options.ticks;
   for (let k = 0; k < targetTicks; k++) {
-    // Check if new input arrives at tick k
     if (inputFrames.has(k)) {
       sim.setInput(inputFrames.get(k));
     }
 
-    // Step produces state k + 1
     const events = sim.step();
 
-    // Record events occurring during this step
     for (const evt of events) {
       outLines.push(JSON.stringify(evt));
     }
 
-    // Record snapshot if tick is multiple of snapshotEvery
     if (sim.tick % options.snapshotEvery === 0) {
       outLines.push(JSON.stringify(sim.getSnapshot()));
     }
 
-    // Stop early if game is over
-    if (sim.state !== 'playing') {
+    if (sim.state !== 'playing' && !sim.paused) {
       break;
     }
   }
 
-  // Final mandatory "end" line
   const endObj = {
     type: 'end',
     ticks: sim.tick,
@@ -193,7 +196,6 @@ function main() {
   };
   outLines.push(JSON.stringify(endObj));
 
-  // Write output to file
   const outDir = path.dirname(options.outPath);
   if (outDir && outDir !== '.' && !fs.existsSync(outDir)) {
     fs.mkdirSync(outDir, { recursive: true });
