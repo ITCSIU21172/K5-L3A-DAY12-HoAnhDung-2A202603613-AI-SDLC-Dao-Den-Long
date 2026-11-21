@@ -16,6 +16,7 @@ let onDawnComplete = null;
 let cheatGodMode = false;
 let cheatSuperSpeed = false;
 let playerMesh, hatLanternLight;
+let playerParts = { legL: null, legR: null, armL: null, armR: null, body: null, hat: null, scarf: null };
 let lanternMeshes = [];
 let moteMeshes = [];
 let shadeMeshes = [];
@@ -86,7 +87,7 @@ function initThree() {
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setSize(width, height);
-  renderer.setPixelRatio(isBenchmark ? 1 : Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(isBenchmark ? 1 : Math.min(window.devicePixelRatio, 1.25));
   renderer.shadowMap.enabled = true;
 
   if (isBenchmark) {
@@ -100,6 +101,8 @@ function initThree() {
   moonLight = new THREE.DirectionalLight(0xffe9b0, 0.5);
   moonLight.position.set(40, 70, 30);
   moonLight.castShadow = true;
+  moonLight.shadow.mapSize.width = 1024;
+  moonLight.shadow.mapSize.height = 1024;
   scene.add(moonLight);
 
   // Sea of clouds
@@ -201,34 +204,42 @@ function buildMapGeometry(night) {
     scene.add(bridge);
     islandMeshes.push(bridge);
   } else if (night === 3) {
-    // 3 Tiers
-    // Tier 0: r=45m at Y=0
+    // Đảo Chuông: Wide Grand Island with flat Courtyard Terraces and Bell Tower
+    // Base Island: r=45m at Y=0
     const t0Geo = new THREE.CylinderGeometry(45, 47, 4, 48);
     const t0 = new THREE.Mesh(t0Geo, grassMat);
     t0.position.y = -2;
     scene.add(t0);
     islandMeshes.push(t0);
 
-    // Tier 1: Y=3, Annulus r=12-24m on z > 0
-    const t1Geo = new THREE.CylinderGeometry(24, 24, 3, 36, 1, false, 0, Math.PI);
+    // Flat decorative stone courtyard ring (height 0.12m, no collision ledge)
+    const t1Geo = new THREE.CylinderGeometry(24, 24, 0.12, 36);
     const t1 = new THREE.Mesh(t1Geo, sandMat);
-    t1.position.set(0, 1.5, 0);
+    t1.position.set(0, 0.06, 0);
     scene.add(t1);
     islandMeshes.push(t1);
 
-    // Tier 2: Y=6, Disc r=8m
-    const t2Geo = new THREE.CylinderGeometry(8, 8, 6, 24);
-    const t2 = new THREE.Mesh(t2Geo, grassMat);
-    t2.position.set(0, 3, 0);
+    // Flat decorative shrine courtyard (height 0.18m)
+    const t2Geo = new THREE.CylinderGeometry(10, 10, 0.18, 24);
+    const t2 = new THREE.Mesh(t2Geo, woodMat);
+    t2.position.set(0, 0.09, 0);
     scene.add(t2);
     islandMeshes.push(t2);
 
-    // Bell Tower at center of Tier 2 (radius 2m, height 8m)
-    const towerGeo = new THREE.CylinderGeometry(2, 2, 8, 16);
+    // Bell Tower at center of Island (radius 2.0m, height 8m)
+    const towerGeo = new THREE.CylinderGeometry(2.0, 2.3, 8, 16);
     const tower = new THREE.Mesh(towerGeo, woodMat);
-    tower.position.set(0, 10, 0);
+    tower.position.set(0, 4.0, 0);
     scene.add(tower);
     islandMeshes.push(tower);
+
+    // Pagoda roof for Bell Tower
+    const roofGeo = new THREE.ConeGeometry(3.5, 1.8, 8);
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0xc8102e, roughness: 0.5 });
+    const roof = new THREE.Mesh(roofGeo, roofMat);
+    roof.position.set(0, 8.8, 0);
+    scene.add(roof);
+    islandMeshes.push(roof);
   }
 
   // Jump pads
@@ -245,36 +256,100 @@ function buildMapGeometry(night) {
 function buildPlayer() {
   const group = new THREE.Group();
 
-  // Robe (Standardized #E8E2D0)
-  const bodyGeo = new THREE.ConeGeometry(0.5, 1.2, 16);
+  // 1. Lower Body / Robe Base
+  const bodyGeo = new THREE.ConeGeometry(0.5, 1.0, 16);
   const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe8e2d0, roughness: 0.6 });
   const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.position.y = 0.6;
+  body.position.y = 0.65;
   group.add(body);
+  playerParts.body = body;
 
-  // Red Scarf (Standardized #C8102E)
+  // 2. Legs (Chân nhân vật Mây với giày vải xinh xắn)
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x2d3748, roughness: 0.8 });
+  const shoeMat = new THREE.MeshStandardMaterial({ color: 0x5a3e2b, roughness: 0.7 });
+
+  // Left Leg
+  const legLGroup = new THREE.Group();
+  legLGroup.position.set(0.16, 0.35, 0);
+  const legLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.38, 8), legMat);
+  legLMesh.position.y = -0.15;
+  legLGroup.add(legLMesh);
+  const shoeL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.22), shoeMat);
+  shoeL.position.set(0, -0.32, 0.04);
+  legLGroup.add(shoeL);
+  group.add(legLGroup);
+  playerParts.legL = legLGroup;
+
+  // Right Leg
+  const legRGroup = new THREE.Group();
+  legRGroup.position.set(-0.16, 0.35, 0);
+  const legRMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.38, 8), legMat);
+  legRMesh.position.y = -0.15;
+  legRGroup.add(legRMesh);
+  const shoeR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.22), shoeMat);
+  shoeR.position.set(0, -0.32, 0.04);
+  legRGroup.add(shoeR);
+  group.add(legRGroup);
+  playerParts.legR = legRGroup;
+
+  // 3. Arms (Tay áo thụng truyền thống)
+  const armMat = new THREE.MeshStandardMaterial({ color: 0xd8d2bf, roughness: 0.6 });
+
+  // Left Arm
+  const armLGroup = new THREE.Group();
+  armLGroup.position.set(0.38, 0.95, 0);
+  const armLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.42, 8), armMat);
+  armLMesh.position.y = -0.16;
+  armLMesh.rotation.z = -0.2;
+  armLGroup.add(armLMesh);
+  group.add(armLGroup);
+  playerParts.armL = armLGroup;
+
+  // Right Arm
+  const armRGroup = new THREE.Group();
+  armRGroup.position.set(-0.38, 0.95, 0);
+  const armRMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.42, 8), armMat);
+  armRMesh.position.y = -0.16;
+  armRMesh.rotation.z = 0.2;
+  armRGroup.add(armRMesh);
+  group.add(armRGroup);
+  playerParts.armR = armRGroup;
+
+  // 4. Red Scarf (Khăn rằn / khăn quàng đỏ)
   const scarfGeo = new THREE.TorusGeometry(0.3, 0.08, 8, 16);
   const scarfMat = new THREE.MeshStandardMaterial({ color: 0xc8102e });
   const scarf = new THREE.Mesh(scarfGeo, scarfMat);
   scarf.rotation.x = Math.PI / 2;
   scarf.position.y = 1.15;
   group.add(scarf);
+  playerParts.scarf = scarf;
 
-  // Head
+  // 5. Head & Cute Face
   const headGeo = new THREE.SphereGeometry(0.26, 16, 16);
   const headMat = new THREE.MeshStandardMaterial({ color: 0xfbd38d, roughness: 0.5 });
   const head = new THREE.Mesh(headGeo, headMat);
   head.position.y = 1.25;
+
+  // Expressive dark eyes
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x1a202c });
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), eyeMat);
+  eyeL.position.set(0.08, 0.02, 0.24);
+  head.add(eyeL);
+  const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), eyeMat);
+  eyeR.position.set(-0.08, 0.02, 0.24);
+  head.add(eyeR);
+
   group.add(head);
 
-  // Conical Hat (Nón Lá)
+  // 6. Conical Hat (Nón Lá)
   const hatGeo = new THREE.ConeGeometry(0.85, 0.4, 24);
   const hatMat = new THREE.MeshStandardMaterial({ color: 0xf2c14e, roughness: 0.8 });
   const hat = new THREE.Mesh(hatGeo, hatMat);
   hat.position.y = 1.48;
   group.add(hat);
+  playerParts.hat = hat;
 
-  // Mini Lantern on Hat
+  // 7. Mini Lantern on Hat
   const miniLanternGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.16, 8);
   const miniLanternMat = new THREE.MeshStandardMaterial({ color: 0xffb347, emissive: 0xffb347, emissiveIntensity: 2.0 });
   const miniLantern = new THREE.Mesh(miniLanternGeo, miniLanternMat);
@@ -407,13 +482,11 @@ function updateVisualEntities() {
     }
   }
 
-  // 2. Motes (Fireflies)
+  // 2. Motes (Fireflies) - High Performance: Glowing Emissive Material without 100 dynamic point lights
+  const moteGeo = new THREE.SphereGeometry(0.2, 10, 10);
+  const moteMat = new THREE.MeshBasicMaterial({ color: 0xfffae0 });
   while (moteMeshes.length < sim.motes.length) {
-    const geo = new THREE.SphereGeometry(0.18, 12, 12);
-    const mat = new THREE.MeshStandardMaterial({ color: 0xfff6c2, emissive: 0xffe58a, emissiveIntensity: 2.2 });
-    const mesh = new THREE.Mesh(geo, mat);
-    const pLight = new THREE.PointLight(0xffe58a, 0.8, 4);
-    mesh.add(pLight);
+    const mesh = new THREE.Mesh(moteGeo, moteMat);
     scene.add(mesh);
     moteMeshes.push({ mesh, id: null });
   }
@@ -729,14 +802,16 @@ function renderMinimap() {
 }
 
 function showStartNightModal(night) {
+  currentNight = night;
   const modal = document.getElementById('modal-start');
   const title = document.getElementById('start-title');
   const desc = document.getElementById('start-desc');
   const btn = document.getElementById('btn-start-game');
 
   const nightNames = ['', 'ĐÊM 1 — ĐẢO BẾN', 'ĐÊM 2 — ĐẢO CAU', 'ĐÊM 3 — ĐẢO CHUÔNG'];
-  title.textContent = nightNames[night];
-  document.getElementById('night-label').textContent = nightNames[night];
+  title.textContent = nightNames[night] || `ĐÊM ${night}`;
+  const labelEl = document.getElementById('night-label');
+  if (labelEl) labelEl.textContent = nightNames[night] || `ĐÊM ${night}`;
 
   if (night === 1) {
     desc.textContent = 'Lời Ông Đăng: "Mây ơi, sương đen đã bao trùm Đảo Bến. Hãy dùng nón lá và ngọn đèn nhỏ của con gom đom đóm thắp sáng 5 Đèn Lồng Lớn nhé!"';
@@ -745,7 +820,7 @@ function showStartNightModal(night) {
     desc.textContent = 'Lời Ông Đăng: "Đảo Cau gồm hai hòn đảo nối bằng cầu tre. Hãy dùng bục nhảy để phóng qua đảo đối diện, cẩn thận loài Gió Lạc bay nhanh chuyên cướp đom đóm, và nhặt Bùa Gió trên cầu để lướt liên tục!"';
     btn.textContent = 'Bắt Đầu Đêm 2';
   } else if (night === 3) {
-    desc.textContent = 'Lời Ông Đăng: "Đảo Chuông có 3 tầng đá cao vút và ngọn Tháp Chuông ở đỉnh. Gió mạnh sẽ thổi từng cơn, hãy bước theo các đường dốc hoặc dùng bục nhảy bay lên tầng cao nhất!"';
+    desc.textContent = 'Lời Ông Đăng: "Đảo Chuông có khuôn viên Tháp Chuông uy nghiêm. Gió mạnh sẽ thổi từng cơn, hãy gom đom đóm thắp sáng 7 Đèn Lồng và giữ ánh sáng tới bình minh!"';
     btn.textContent = 'Bắt Đầu Đêm 3';
   }
 
@@ -759,6 +834,8 @@ function showDawnVictoryModal() {
   const btn = document.getElementById('btn-start-game');
 
   title.textContent = 'BÌNH MINH TRÊN ĐẢO ĐÈN LỒNG';
+  const labelEl = document.getElementById('night-label');
+  if (labelEl) labelEl.textContent = 'HOÀN THÀNH 3 ĐÊM';
   desc.innerHTML = `
     Chúc mừng Mây! Bạn đã thắp sáng tất cả các Đèn Lồng Lớn trên cả 3 Đêm! Sương đen đã tan biến hoàn toàn, ánh dương rực rỡ đã trở lại trên biển mây!<br><br>
     <b style="color:#f2c14e; font-size: 20px;">TỔNG ĐIỂM CHUNG CUỘC: ${cumulativeScore}</b>
@@ -769,6 +846,13 @@ function showDawnVictoryModal() {
 
 function startNight(night) {
   currentNight = night;
+  const nightNames = ['', 'ĐÊM 1 — ĐẢO BẾN', 'ĐÊM 2 — ĐẢO CAU', 'ĐÊM 3 — ĐẢO CHUÔNG'];
+  const labelEl = document.getElementById('night-label');
+  if (labelEl) labelEl.textContent = nightNames[night] || `ĐÊM ${night}`;
+
+  const restartBtn = document.getElementById('btn-restart-night');
+  if (restartBtn) restartBtn.textContent = `Chơi Lại Đêm ${currentNight}`;
+
   sim = new Simulation({ seed: Date.now(), night: currentNight });
   buildMapGeometry(currentNight);
 
@@ -913,10 +997,14 @@ function promptSaveScore(result, score, nightsWon, seed) {
   const saveModal = document.getElementById('modal-save-score');
   const title = document.getElementById('save-score-title');
   const desc = document.getElementById('save-score-desc');
-  if (title) title.textContent = result === 'won' ? 'BÌNH MINH LÊN — LƯU ĐIỂM XẾP HẠNG' : 'KẾT THÚC ĐÊM — LƯU ĐIỂM XẾP HẠNG';
-  if (desc) desc.textContent = `Tổng điểm: ${score} · Số Đêm vượt qua: ${nightsWon}/3. Hãy ghi danh vào bảng vàng!`;
+  if (title) title.textContent = result === 'won' ? 'BÌNH MINH LÊN — LƯU ĐIỂM XẾP HẠNG' : `KẾT THÚC ĐÊM ${currentNight} — THỬ LẠI`;
+  if (desc) desc.textContent = result === 'won'
+    ? `Chúc mừng! Tổng điểm: ${score} · Hoàn thành: ${nightsWon}/3 Đêm. Hãy ghi danh vào bảng vàng!`
+    : `Tổng điểm: ${score} · Số Đêm vượt qua: ${nightsWon}/3. Bạn có thể lưu điểm hoặc bấm Thử Lại để chơi lại ngay Đêm ${currentNight}!`;
   const nameInput = document.getElementById('input-player-name');
   if (nameInput) nameInput.value = localStorage.getItem('dao_den_long_last_player_name') || 'NguoiChoi_1';
+  const skipBtn = document.getElementById('btn-save-score-skip');
+  if (skipBtn) skipBtn.textContent = result === 'won' ? 'Tiếp Tục' : `Chơi Lại Đêm ${currentNight}`;
   if (saveModal) saveModal.style.display = 'flex';
 }
 
@@ -1034,6 +1122,13 @@ function setupInputs() {
   document.getElementById('btn-leaderboard-pause')?.addEventListener('click', openLb);
   document.getElementById('btn-leaderboard-close')?.addEventListener('click', () => {
     document.getElementById('modal-leaderboard').style.display = 'none';
+    if (pendingGameResult && pendingGameResult.result === 'lost') {
+      startNight(currentNight);
+    } else if (pendingGameResult && pendingGameResult.result === 'won' && currentNight < 3) {
+      showStartNightModal(currentNight);
+    } else {
+      showStartNightModal(1);
+    }
   });
 
   // Save score modal buttons
@@ -1078,7 +1173,11 @@ function setupInputs() {
 
   document.getElementById('btn-save-score-skip')?.addEventListener('click', () => {
     document.getElementById('modal-save-score').style.display = 'none';
-    showStartNightModal(1);
+    if (pendingGameResult && pendingGameResult.result === 'lost') {
+      startNight(currentNight);
+    } else {
+      showStartNightModal(1);
+    }
   });
 
   document.getElementById('btn-settings-open')?.addEventListener('click', () => {
@@ -1261,6 +1360,8 @@ function setupCheats() {
 
 function togglePauseMenu() {
   const pModal = document.getElementById('modal-pause');
+  const restartBtn = document.getElementById('btn-restart-night');
+  if (restartBtn) restartBtn.textContent = `Chơi Lại Đêm ${currentNight}`;
   pModal.style.display = sim.paused ? 'flex' : 'none';
 }
 
@@ -1526,6 +1627,39 @@ function animate(now) {
   }
 
   updateVisualEntities();
+
+  // Animate character walking (legs, arms, subtle bobbing)
+  if (playerParts.legL && playerParts.legR && sim) {
+    const isMoving = (Math.abs(sim.player.vel[0]) > 0.2 || Math.abs(sim.player.vel[2]) > 0.2) && sim.player.grounded;
+    if (isMoving) {
+      const walkCycle = now * 0.014;
+      playerParts.legL.rotation.x = Math.sin(walkCycle) * 0.65;
+      playerParts.legR.rotation.x = -Math.sin(walkCycle) * 0.65;
+      if (playerParts.armL) playerParts.armL.rotation.x = -Math.sin(walkCycle) * 0.45;
+      if (playerParts.armR) playerParts.armR.rotation.x = Math.sin(walkCycle) * 0.45;
+      if (playerParts.body) playerParts.body.position.y = 0.65 + Math.abs(Math.sin(walkCycle)) * 0.06;
+      if (playerParts.hat) playerParts.hat.rotation.z = Math.sin(walkCycle) * 0.04;
+    } else if (!sim.player.grounded) {
+      playerParts.legL.rotation.x = 0.25;
+      playerParts.legR.rotation.x = -0.15;
+      if (playerParts.armL) playerParts.armL.rotation.z = -0.4;
+      if (playerParts.armR) playerParts.armR.rotation.z = 0.4;
+    } else {
+      const idle = Math.sin(now * 0.003) * 0.03;
+      playerParts.legL.rotation.x = 0;
+      playerParts.legR.rotation.x = 0;
+      if (playerParts.armL) {
+        playerParts.armL.rotation.x = 0;
+        playerParts.armL.rotation.z = -0.15 + idle;
+      }
+      if (playerParts.armR) {
+        playerParts.armR.rotation.x = 0;
+        playerParts.armR.rotation.z = 0.15 - idle;
+      }
+      if (playerParts.body) playerParts.body.position.y = 0.65;
+      if (playerParts.hat) playerParts.hat.rotation.z = 0;
+    }
+  }
 
   // Dawn Cinematic Update
   if (isDawnCinematic) {

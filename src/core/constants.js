@@ -127,9 +127,9 @@ export function getMapConfig(night = 1) {
 
   if (night === 3) {
     const lanterns = [
-      { id: 'L1', pos: [0.0, 6.0, 6.0], lit: false, deposited: 0, fuel: 0.0, ever_lit: false, relit_count: 0 },
-      { id: 'L2', pos: [18.0, 3.0, 10.0], lit: false, deposited: 0, fuel: 0.0, ever_lit: false, relit_count: 0 },
-      { id: 'L3', pos: [-18.0, 3.0, 10.0], lit: false, deposited: 0, fuel: 0.0, ever_lit: false, relit_count: 0 },
+      { id: 'L1', pos: [0.0, 0.0, 6.0], lit: false, deposited: 0, fuel: 0.0, ever_lit: false, relit_count: 0 },
+      { id: 'L2', pos: [18.0, 0.0, 10.0], lit: false, deposited: 0, fuel: 0.0, ever_lit: false, relit_count: 0 },
+      { id: 'L3', pos: [-18.0, 0.0, 10.0], lit: false, deposited: 0, fuel: 0.0, ever_lit: false, relit_count: 0 },
       { id: 'L4', pos: [35.0, 0.0, -10.0], lit: false, deposited: 0, fuel: 0.0, ever_lit: false, relit_count: 0 },
       { id: 'L5', pos: [-35.0, 0.0, -10.0], lit: false, deposited: 0, fuel: 0.0, ever_lit: false, relit_count: 0 },
       { id: 'L6', pos: [20.0, 0.0, -35.0], lit: false, deposited: 0, fuel: 0.0, ever_lit: false, relit_count: 0 },
@@ -143,11 +143,11 @@ export function getMapConfig(night = 1) {
     }
     for (let i = 1; i <= 8; i++) {
       const rad = (i * 20 * Math.PI) / 180;
-      motePoints.push([Math.cos(rad) * 18, 3, Math.sin(rad) * 18]);
+      motePoints.push([Math.cos(rad) * 18, 0, Math.sin(rad) * 18]);
     }
     [45, 135, 225, 315].forEach(deg => {
       const rad = (deg * Math.PI) / 180;
-      motePoints.push([Math.cos(rad) * 5, 6, Math.sin(rad) * 5]);
+      motePoints.push([Math.cos(rad) * 5, 0, Math.sin(rad) * 5]);
     });
 
     const shadePoints = [];
@@ -157,7 +157,7 @@ export function getMapConfig(night = 1) {
     }
 
     const jumpPads = [
-      { id: 'JP1', pos: [0.0, 3.0, 13.0], radius: 1.0, vy: 12.0, target: [0.0, 6.0, 5.0], speedHoriz: 8.0, dir: [0, -1] }
+      { id: 'JP1', pos: [0.0, 0.0, 18.0], radius: 1.0, vy: 12.0, target: [0.0, 0.0, -10.0], speedHoriz: 12.0, dir: [0, -1] }
     ];
 
     const charms = [

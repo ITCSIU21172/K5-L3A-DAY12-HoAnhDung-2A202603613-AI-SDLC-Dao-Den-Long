@@ -362,16 +362,6 @@ export class Simulation {
     if (this.night === 3) {
       const r = Math.sqrt(x * x + z * z);
       if (r > 45.0) return -100.0;
-      if (r <= 8.0) return 6.0;
-      if (r >= 12.0 && r <= 24.0 && z > 0) return 3.0;
-
-      const angleDeg = (Math.atan2(z, x) * 180) / Math.PI;
-      const normalizedAngle = (angleDeg + 360) % 360;
-      const isRamp1 = Math.abs(normalizedAngle - 30) <= 3.5;
-      const isRamp2 = Math.abs(normalizedAngle - 150) <= 3.5;
-      if ((isRamp1 || isRamp2) && r >= 24.0 && r <= 30.0) {
-        return ((30.0 - r) / 6.0) * 3.0;
-      }
       return 0.0;
     }
     return 0.0;

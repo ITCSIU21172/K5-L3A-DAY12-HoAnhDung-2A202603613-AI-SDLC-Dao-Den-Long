@@ -43,6 +43,20 @@
       "seed": 101
     },
     {
+      "name": "Player_B",
+      "score": 750,
+      "nights_won": 3,
+      "achieved_at": "2026-11-21T02:23:46.253Z",
+      "seed": 101
+    },
+    {
+      "name": "Player_B",
+      "score": 750,
+      "nights_won": 3,
+      "achieved_at": "2026-11-21T02:51:24.090Z",
+      "seed": 101
+    },
+    {
       "name": "Player_A",
       "score": 500,
       "nights_won": 3,
@@ -54,20 +68,6 @@
       "score": 500,
       "nights_won": 3,
       "achieved_at": "2026-11-20T09:48:33.642Z",
-      "seed": 100
-    },
-    {
-      "name": "Player_A",
-      "score": 500,
-      "nights_won": 3,
-      "achieved_at": "2026-11-20T09:50:54.516Z",
-      "seed": 100
-    },
-    {
-      "name": "Player_A",
-      "score": 500,
-      "nights_won": 3,
-      "achieved_at": "2026-11-20T09:52:37.901Z",
       "seed": 100
     }
   ]
