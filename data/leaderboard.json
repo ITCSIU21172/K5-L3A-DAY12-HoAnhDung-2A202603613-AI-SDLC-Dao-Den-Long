@@ -57,17 +57,17 @@
       "seed": 101
     },
     {
-      "name": "Player_A",
-      "score": 500,
+      "name": "Player_B",
+      "score": 750,
       "nights_won": 3,
-      "achieved_at": "2026-11-20T09:45:40.921Z",
-      "seed": 100
+      "achieved_at": "2026-11-21T03:35:19.001Z",
+      "seed": 101
     },
     {
       "name": "Player_A",
       "score": 500,
       "nights_won": 3,
-      "achieved_at": "2026-11-20T09:48:33.642Z",
+      "achieved_at": "2026-11-20T09:45:40.921Z",
       "seed": 100
     }
   ]
