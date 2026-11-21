@@ -1,7 +1,7 @@
 # Đảo Đèn Lồng (Lantern Island) — 3D AI SDLC Game
 
 > **Học viên:** Hồ Anh Dũng · **MSSV:** 03613 · **Khóa 5 - L3A**  
-> **Video Demo:** [docs/demo/demo.mp4](docs/demo/demo.mp4)  
+> **Video Demo:** [docs/demo/demo.mp4](docs/demo/Demo.mp4)  
 > **Lab Board:** [Đảo Đèn Lồng Lab](https://claude.ai/artifact/Q1RYyv1dxjUczzCbd2ZnoW)  
 > **Phiên bản phát hành:** Release `v1.0.0` (Ticket-04 — "Bình minh: phát hành v1.0.0") · **Contract:** `v1.3` · **Tag:** `phase-4` / `v1.0.0`
 
