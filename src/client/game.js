@@ -7,6 +7,14 @@ let sim = null;
 let currentNight = 1;
 let cumulativeScore = 0;
 let scene, camera, renderer, ambientLight, moonLight;
+let sunLight, sunMesh, cloudsMesh;
+let isDawnCinematic = false;
+let dawnStartTime = 0;
+let dawnDurationS = 5.0;
+let onDawnComplete = null;
+
+let cheatGodMode = false;
+let cheatSuperSpeed = false;
 let playerMesh, hatLanternLight;
 let lanternMeshes = [];
 let moteMeshes = [];
@@ -101,6 +109,35 @@ function initThree() {
   clouds.rotation.x = -Math.PI / 2;
   clouds.position.y = -8;
   scene.add(clouds);
+  cloudsMesh = clouds;
+
+  // Sun Light for Dawn
+  sunLight = new THREE.DirectionalLight(0xfffae0, 0.0);
+  sunLight.position.set(0, -20, -120);
+  sunLight.castShadow = true;
+  scene.add(sunLight);
+
+  // Sun visual sphere with radiant halo
+  const sunGroup = new THREE.Group();
+  const sunCoreGeo = new THREE.SphereGeometry(14, 32, 32);
+  const sunCoreMat = new THREE.MeshBasicMaterial({ color: 0xfffae0 });
+  const sunCore = new THREE.Mesh(sunCoreGeo, sunCoreMat);
+  sunGroup.add(sunCore);
+
+  const sunGlowGeo = new THREE.SphereGeometry(24, 32, 32);
+  const sunGlowMat = new THREE.MeshBasicMaterial({
+    color: 0xffa726,
+    transparent: true,
+    opacity: 0.5,
+    side: THREE.BackSide
+  });
+  const sunGlow = new THREE.Mesh(sunGlowGeo, sunGlowMat);
+  sunGroup.add(sunGlow);
+
+  sunGroup.position.set(0, -40, -140);
+  sunGroup.visible = false;
+  scene.add(sunGroup);
+  sunMesh = sunGroup;
 
   buildStars();
   buildPulseSphere();
@@ -748,6 +785,56 @@ function startNight(night) {
 
   document.getElementById('modal-start').style.display = 'none';
   sounds.init();
+
+  // Reset visual state from dawn back to dark night
+  isDawnCinematic = false;
+  onDawnComplete = null;
+  if (sunMesh) sunMesh.visible = false;
+  if (sunLight) sunLight.intensity = 0;
+  if (moonLight) moonLight.intensity = 0.5;
+  if (ambientLight) {
+    ambientLight.color.setHex(0x2f5d50);
+    ambientLight.intensity = 0.2;
+  }
+  if (scene) {
+    scene.background.setHex(0x0e1430);
+    if (scene.fog) {
+      scene.fog.color.setHex(0x1b2350);
+      scene.fog.density = 0.015;
+    }
+  }
+  if (cloudsMesh) {
+    cloudsMesh.material.color.setHex(0x12384a);
+  }
+  const dawnBanner = document.getElementById('dawn-banner');
+  if (dawnBanner) dawnBanner.style.display = 'none';
+
+  // Apply cheat states if enabled
+  if (cheatGodMode && sim) {
+    sim.player.flames = 3;
+  }
+  if (cheatSuperSpeed && sim) {
+    sim.tuning.speed = 13.0;
+    sim.tuning.dash_speed = 26.0;
+    sim.player.dash_cd = 0;
+  }
+}
+
+function triggerDawnCinematic(onComplete) {
+  if (isDawnCinematic) return;
+  isDawnCinematic = true;
+  dawnStartTime = performance.now();
+  onDawnComplete = onComplete || null;
+
+  if (sunMesh) {
+    sunMesh.visible = true;
+    sunMesh.position.set(0, -35, -140);
+  }
+  const banner = document.getElementById('dawn-banner');
+  if (banner) {
+    banner.style.display = 'block';
+  }
+  sounds.playDawnSunrise();
 }
 
 function escapeHtml(str) {
@@ -1041,6 +1128,137 @@ function setupInputs() {
   }
 }
 
+function setupCheats() {
+  const modalCheat = document.getElementById('modal-cheat');
+  const toggleCheat = () => {
+    if (!modalCheat) return;
+    const isHidden = modalCheat.style.display === 'none' || !modalCheat.style.display;
+    modalCheat.style.display = isHidden ? 'flex' : 'none';
+  };
+
+  document.getElementById('btn-toggle-cheat')?.addEventListener('click', toggleCheat);
+  document.getElementById('btn-cheat-close')?.addEventListener('click', () => {
+    if (modalCheat) modalCheat.style.display = 'none';
+  });
+
+  const doMaxMotes = () => {
+    if (!sim) return;
+    sim.player.carried = sim.getCapacity();
+    showSubtitle('⚡ [CHEAT] Đã nạp đầy túi đom đóm!');
+  };
+  document.getElementById('cheat-max-motes')?.addEventListener('click', doMaxMotes);
+
+  const doLightAll = () => {
+    if (!sim) return;
+    sim.lanterns.forEach(l => {
+      l.lit = true;
+      l.fuel_ticks = 6000;
+      l.ever_lit = true;
+    });
+    showSubtitle('🏮 [CHEAT] Đã thắp sáng 100% & nạp đầy dầu mọi Đèn Lồng!');
+  };
+  document.getElementById('cheat-light-all')?.addEventListener('click', doLightAll);
+
+  const doToggleGod = () => {
+    cheatGodMode = !cheatGodMode;
+    const statusEl = document.getElementById('cheat-god-status');
+    if (statusEl) {
+      statusEl.textContent = cheatGodMode ? '[Phím 3] ĐANG BẬT (Bất tử)' : '[Phím 3] Đang TẮT';
+      statusEl.style.color = cheatGodMode ? '#f2c14e' : '#68d391';
+    }
+    if (cheatGodMode && sim) sim.player.flames = 3;
+    showSubtitle(cheatGodMode ? '🛡️ [CHEAT] Bất tử (God Mode): BẬT' : '🛡️ [CHEAT] Bất tử: TẮT');
+  };
+  document.getElementById('cheat-god-mode')?.addEventListener('click', doToggleGod);
+
+  const doToggleSpeed = () => {
+    cheatSuperSpeed = !cheatSuperSpeed;
+    const statusEl = document.getElementById('cheat-speed-status');
+    if (statusEl) {
+      statusEl.textContent = cheatSuperSpeed ? '[Phím 4] ĐANG BẬT (2x & 0s Dash)' : '[Phím 4] Đang TẮT';
+      statusEl.style.color = cheatSuperSpeed ? '#f2c14e' : '#68d391';
+    }
+    showSubtitle(cheatSuperSpeed ? '🏃 [CHEAT] Tốc độ siêu tốc: BẬT' : '🏃 [CHEAT] Tốc độ: Bình thường');
+  };
+  document.getElementById('cheat-super-speed')?.addEventListener('click', doToggleSpeed);
+
+  const doFreezeEnemies = () => {
+    if (!sim) return;
+    sim.shades.forEach(s => {
+      s.state = 'stunned';
+      s.state_ticks_left = 99999;
+    });
+    showSubtitle('❄️ [CHEAT] Đã đóng băng toàn bộ Bóng Mực!');
+  };
+  document.getElementById('cheat-freeze-enemies')?.addEventListener('click', doFreezeEnemies);
+
+  const doClearEnemies = () => {
+    if (!sim) return;
+    sim.shades = [];
+    sim.drifters = [];
+    showSubtitle('🧹 [CHEAT] Đã dọn sạch quái vật trên đảo!');
+  };
+  document.getElementById('cheat-clear-enemies')?.addEventListener('click', doClearEnemies);
+
+  const doSkipDawn = () => {
+    if (!sim) return;
+    const minLit = Math.ceil(0.6 * sim.lanterns.length);
+    sim.lanterns.forEach((l, idx) => {
+      if (idx < minLit || l.lit) {
+        l.lit = true;
+        l.fuel_ticks = 6000;
+        l.ever_lit = true;
+      }
+    });
+    sim.time_left_s = 2.0;
+    if (modalCheat) modalCheat.style.display = 'none';
+    showSubtitle('🌅 [CHEAT] Tua nhanh tới bình minh (2 giây)...');
+  };
+  document.getElementById('cheat-skip-dawn')?.addEventListener('click', doSkipDawn);
+
+  const doPlayDawn = () => {
+    if (modalCheat) modalCheat.style.display = 'none';
+    showSubtitle('✨ [DEMO] Chiếu hoạt cảnh bình minh!');
+    triggerDawnCinematic(() => {
+      showSubtitle('🌅 [DEMO] Hoạt cảnh bình minh hoàn tất!');
+    });
+  };
+  document.getElementById('cheat-play-dawn-anim')?.addEventListener('click', doPlayDawn);
+
+  document.getElementById('cheat-night-1')?.addEventListener('click', () => {
+    if (modalCheat) modalCheat.style.display = 'none';
+    startNight(1);
+    showSubtitle('🗺️ [DEMO] Chuyển tới Đêm 1 (Đảo Bến)!');
+  });
+  document.getElementById('cheat-night-2')?.addEventListener('click', () => {
+    if (modalCheat) modalCheat.style.display = 'none';
+    startNight(2);
+    showSubtitle('🗺️ [DEMO] Chuyển tới Đêm 2 (Đảo Cau)!');
+  });
+  document.getElementById('cheat-night-3')?.addEventListener('click', () => {
+    if (modalCheat) modalCheat.style.display = 'none';
+    startNight(3);
+    showSubtitle('🗺️ [DEMO] Chuyển tới Đêm 3 (Đảo Chuông)!');
+  });
+
+  window.addEventListener('keydown', e => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    if (e.code === 'F2' || e.code === 'Backquote') {
+      e.preventDefault();
+      toggleCheat();
+      return;
+    }
+    if (e.code === 'Digit1') doMaxMotes();
+    else if (e.code === 'Digit2') doLightAll();
+    else if (e.code === 'Digit3') doToggleGod();
+    else if (e.code === 'Digit4') doToggleSpeed();
+    else if (e.code === 'Digit5') doFreezeEnemies();
+    else if (e.code === 'Digit6') doClearEnemies();
+    else if (e.code === 'Digit7') doSkipDawn();
+    else if (e.code === 'Digit8') doPlayDawn();
+  });
+}
+
 function togglePauseMenu() {
   const pModal = document.getElementById('modal-pause');
   pModal.style.display = sim.paused ? 'flex' : 'none';
@@ -1226,6 +1444,19 @@ function animate(now) {
   // Normal Gameplay Loop
   while (now - lastTickTime >= tickInterval) {
     if (sim.state === 'playing' && !sim.paused) {
+      // Cheat effects
+      if (cheatGodMode) {
+        sim.player.flames = 3;
+      }
+      if (cheatSuperSpeed) {
+        sim.tuning.speed = 13.0;
+        sim.tuning.dash_speed = 26.0;
+        sim.player.dash_cd = 0;
+      } else {
+        sim.tuning.speed = 6.0;
+        sim.tuning.dash_speed = 14.0;
+      }
+
       let mx = (keys[keybinds.right] ? 1 : 0) - (keys[keybinds.left] ? 1 : 0);
       let mz = (keys[keybinds.forward] ? 1 : 0) - (keys[keybinds.backward] ? 1 : 0);
       sim.setInput({
@@ -1273,14 +1504,17 @@ function animate(now) {
         if (evt.name === 'game_over') {
           if (evt.data.result === 'won') {
             cumulativeScore += sim.score;
-            sounds.playVictory();
-            if (currentNight < 3) {
-              currentNight++;
-              showStartNightModal(currentNight);
-            } else {
-              showDawnVictoryModal();
-              promptSaveScore('won', cumulativeScore, 3, sim.seed);
-            }
+            triggerDawnCinematic(() => {
+              const banner = document.getElementById('dawn-banner');
+              if (banner) banner.style.display = 'none';
+              if (currentNight < 3) {
+                currentNight++;
+                showStartNightModal(currentNight);
+              } else {
+                showDawnVictoryModal();
+                promptSaveScore('won', cumulativeScore, 3, sim.seed);
+              }
+            });
           } else {
             sounds.playDefeat();
             promptSaveScore('lost', cumulativeScore, currentNight - 1, sim.seed);
@@ -1292,6 +1526,70 @@ function animate(now) {
   }
 
   updateVisualEntities();
+
+  // Dawn Cinematic Update
+  if (isDawnCinematic) {
+    const elapsed = (now - dawnStartTime) / 1000.0;
+    const progress = Math.min(1.0, elapsed / dawnDurationS);
+
+    // 1. Sky color interpolation: 0x0e1430 -> 0xd85841 -> 0x6db0e8
+    const nightSky = new THREE.Color(0x0e1430);
+    const dawnTwilight = new THREE.Color(0xd85841);
+    const morningSky = new THREE.Color(0x6db0e8);
+    if (progress < 0.5) {
+      scene.background.lerpColors(nightSky, dawnTwilight, progress * 2.0);
+    } else {
+      scene.background.lerpColors(dawnTwilight, morningSky, (progress - 0.5) * 2.0);
+    }
+
+    // 2. Fog interpolation: 0x1b2350 -> 0xe07a5f -> 0xffe2b8
+    const nightFog = new THREE.Color(0x1b2350);
+    const dawnFog = new THREE.Color(0xe07a5f);
+    const morningFog = new THREE.Color(0xffe2b8);
+    if (progress < 0.5) {
+      scene.fog.color.lerpColors(nightFog, dawnFog, progress * 2.0);
+    } else {
+      scene.fog.color.lerpColors(dawnFog, morningFog, (progress - 0.5) * 2.0);
+    }
+    scene.fog.density = THREE.MathUtils.lerp(0.015, 0.007, progress);
+
+    // 3. Ambient & Moon lights
+    ambientLight.color.lerpColors(new THREE.Color(0x2f5d50), new THREE.Color(0xffedd4), progress);
+    ambientLight.intensity = THREE.MathUtils.lerp(0.2, 0.95, progress);
+    moonLight.intensity = THREE.MathUtils.lerp(0.5, 0.0, progress);
+
+    // 4. Sun Light & Sun Mesh rise
+    sunLight.intensity = THREE.MathUtils.lerp(0.0, 1.8, progress);
+    const sunY = THREE.MathUtils.lerp(-35, 45, Math.sin(progress * Math.PI * 0.5));
+    if (sunMesh) sunMesh.position.set(0, sunY, -140);
+    sunLight.position.set(0, sunY, -100);
+
+    // 5. Cloud plane color
+    if (cloudsMesh) {
+      cloudsMesh.material.color.lerpColors(new THREE.Color(0x12384a), new THREE.Color(0xffd1ba), progress);
+    }
+
+    // 6. Dissolve enemies in the light
+    const enemyScale = Math.max(0, 1.0 - progress * 1.4);
+    shadeMeshes.forEach(s => s.group && s.group.scale.setScalar(enemyScale));
+    drifterMeshes.forEach(d => d.mesh && d.mesh.scale.setScalar(enemyScale));
+
+    // 7. Cinematic camera orbit
+    if (!reduceMotion) {
+      cameraYaw += 0.22;
+      cameraPitch = THREE.MathUtils.lerp(25, 14, progress);
+      cameraDistance = THREE.MathUtils.lerp(11, 16, progress);
+    }
+
+    if (progress >= 1.0) {
+      if (onDawnComplete) {
+        const cb = onDawnComplete;
+        onDawnComplete = null;
+        setTimeout(() => cb(), 600);
+      }
+    }
+  }
+
   updateCamera();
   updateHUD();
 
@@ -1301,6 +1599,7 @@ function animate(now) {
 initThree();
 playerMesh = buildPlayer();
 setupInputs();
+setupCheats();
 
 if (isBenchmark) {
   startBenchmark();

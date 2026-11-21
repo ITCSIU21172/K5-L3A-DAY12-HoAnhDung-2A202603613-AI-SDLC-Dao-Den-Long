@@ -241,6 +241,33 @@ class SoundManager {
     osc.stop(t + 0.08);
   }
 
+  playDawnSunrise() {
+    if (!this.enabled) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    // Radiant morning chime: D major 9th chords & crystal bell tones
+    const freqs = [293.66, 440.0, 554.37, 659.25, 880.0, 1108.73];
+    freqs.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.18);
+
+      gain.gain.setValueAtTime(0.001, t + idx * 0.18);
+      gain.gain.linearRampToValueAtTime((0.22 / freqs.length) * 2, t + idx * 0.18 + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + idx * 0.18 + 2.8);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(t + idx * 0.18);
+      osc.stop(t + idx * 0.18 + 2.8);
+    });
+  }
+
   playVictory() {
     if (!this.enabled) return;
     this.init();

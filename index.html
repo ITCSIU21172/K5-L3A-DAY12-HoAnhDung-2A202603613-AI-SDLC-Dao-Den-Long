@@ -375,6 +375,95 @@
       width: 100%;
       height: 100%;
     }
+
+    /* Dawn Cinematic Banner */
+    .dawn-banner {
+      position: absolute;
+      top: 28%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 95;
+      display: none;
+      width: 90%;
+      max-width: 800px;
+      animation: dawnFadeIn 1.2s ease-out forwards;
+    }
+    .dawn-banner-title {
+      font-size: 36px;
+      font-weight: 900;
+      color: #fff6c2;
+      text-shadow: 0 0 25px #ffaa47, 0 0 50px #ff6a00;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .dawn-banner-subtitle {
+      font-size: 20px;
+      font-weight: 600;
+      color: #ffe0b2;
+      text-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+    }
+    @keyframes dawnFadeIn {
+      0% { opacity: 0; transform: translate(-50%, -40%) scale(0.9); }
+      100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    /* Floating Cheat Pill Button */
+    .btn-cheat-pill {
+      position: absolute;
+      top: 68px;
+      left: 20px;
+      background: linear-gradient(135deg, #0984e3, #6c5ce7);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      pointer-events: auto;
+      z-index: 50;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+      transition: all 0.2s;
+    }
+    .btn-cheat-pill:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 18px rgba(108, 92, 231, 0.7);
+    }
+
+    .btn-cheat-action {
+      background: #1e264f;
+      border: 1px solid #4a5568;
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      text-align: left;
+      transition: all 0.15s;
+    }
+    .btn-cheat-action:hover {
+      border-color: #00f2fe;
+      background: #283366;
+      transform: translateY(-2px);
+    }
+    .btn-cheat-night {
+      flex: 1;
+      background: #232b57;
+      border: 1px solid var(--color-gold);
+      color: var(--color-gold);
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-cheat-night:hover {
+      background: var(--color-gold);
+      color: #171d3d;
+    }
   </style>
 </head>
 <body>
@@ -392,6 +481,11 @@
         <span>🔥</span><span>🔥</span><span>🔥</span>
       </div>
     </div>
+
+    <!-- Cheat Pill Button (Floating) -->
+    <button id="btn-toggle-cheat" class="btn-cheat-pill" title="Mở bảng cheat / demo hỗ trợ thuyết trình">
+      🎮 CHEAT DEMO (F2)
+    </button>
 
     <!-- Top Center: Timer -->
     <div class="top-center">
@@ -420,6 +514,12 @@
     <!-- Subtitle Banner & Edge Alert Indicator -->
     <div id="subtitle-banner" class="subtitle-banner" style="display:none;"></div>
     <div id="edge-alert-indicator" class="edge-indicator">▲</div>
+
+    <!-- Dawn Cinematic Banner -->
+    <div id="dawn-banner" class="dawn-banner">
+      <div class="dawn-banner-title">🌅 BÌNH MINH TRÊN ĐẢO ĐÈN LỒNG</div>
+      <div class="dawn-banner-subtitle">Ánh dương rực rỡ trở lại — Sương đen tan biến — Hòn đảo được bình yên!</div>
+    </div>
 
     <!-- Bottom Center: Dynamic Firefly slots -->
     <div class="bottom-center">
@@ -510,6 +610,55 @@
       <div style="display:flex; gap:12px; justify-content:center;">
         <button class="btn-action" id="btn-save-score-submit">Lưu Điểm</button>
         <button class="btn-action btn-secondary" id="btn-save-score-skip">Bỏ Qua</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cheat Modal for Fast Demo -->
+  <div id="modal-cheat" class="modal-overlay" style="display:none; z-index: 200;">
+    <div class="modal-box" style="max-width: 540px; border-color: #00f2fe; box-shadow: 0 10px 40px rgba(0, 242, 254, 0.4);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+        <h1 style="color: #00f2fe; margin:0; font-size: 22px;">🎮 BẢNG CHEAT DEMO (5 PHÚT)</h1>
+        <button id="btn-cheat-close" style="background:none; border:none; color:#cbd5e0; font-size:26px; cursor:pointer; line-height:1;">&times;</button>
+      </div>
+      <p style="font-size:14px; margin-bottom: 16px; color:#a0aec0;">
+        Sử dụng các phím tắt nhanh <b>[1 - 8]</b> hoặc bấm nút để demo mượt mà các màn chơi và tính năng!
+      </p>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+        <button class="btn-cheat-action" id="cheat-max-motes">
+          ⚡ <b>Gom Đầy Đom Đóm</b><br><small style="color:#a0aec0;">[Phím 1] Đầy túi tức thì</small>
+        </button>
+        <button class="btn-cheat-action" id="cheat-light-all">
+          🏮 <b>Thắp Toàn Bộ Đèn</b><br><small style="color:#a0aec0;">[Phím 2] Sáng 100% & đầy dầu</small>
+        </button>
+        <button class="btn-cheat-action" id="cheat-god-mode">
+          🛡️ <b>Bất Tử (God Mode)</b><br><small id="cheat-god-status" style="color:#68d391;">[Phím 3] Đang TẮT</small>
+        </button>
+        <button class="btn-cheat-action" id="cheat-super-speed">
+          🏃 <b>Tốc Độ Siêu Tốc</b><br><small id="cheat-speed-status" style="color:#68d391;">[Phím 4] Đang TẮT (2x & 0s dash)</small>
+        </button>
+        <button class="btn-cheat-action" id="cheat-freeze-enemies">
+          ❄️ <b>Đóng Băng Kẻ Địch</b><br><small style="color:#a0aec0;">[Phím 5] Choáng vĩnh viễn Bóng Mực</small>
+        </button>
+        <button class="btn-cheat-action" id="cheat-clear-enemies">
+          🧹 <b>Xóa Sạch Quái Vật</b><br><small style="color:#a0aec0;">[Phím 6] Dọn sạch Bóng & Gió Lạc</small>
+        </button>
+        <button class="btn-cheat-action" id="cheat-skip-dawn" style="grid-column: span 2; background: linear-gradient(135deg, #f6ad55, #ed8936); color: #1a202c;">
+          🌅 <b>Tua Nhanh Tới Bình Minh (2s)</b><br><small style="color:#2d3748;">[Phím 7] Đếm lùi 2s và kích hoạt hoạt cảnh bình minh</small>
+        </button>
+        <button class="btn-cheat-action" id="cheat-play-dawn-anim" style="grid-column: span 2; background: linear-gradient(135deg, #4299e1, #3182ce); color: #fff;">
+          ✨ <b>Xem Ngay Hoạt Cảnh Bình Minh (Dawn Cinematic)</b><br><small style="color:#bee3f8;">[Phím 8] Chiếu ngay mặt trời mọc & bầu trời rạng rỡ</small>
+        </button>
+      </div>
+
+      <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+        <span style="font-size: 13px; color: var(--color-gold); font-weight: bold; display:block; margin-bottom:8px;">CHUYỂN NHANH ĐẢO ĐỂ DEMO:</span>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-cheat-night" id="cheat-night-1">Đêm 1: Đảo Bến</button>
+          <button class="btn-cheat-night" id="cheat-night-2">Đêm 2: Đảo Cau</button>
+          <button class="btn-cheat-night" id="cheat-night-3">Đêm 3: Đảo Chuông</button>
+        </div>
       </div>
     </div>
   </div>
