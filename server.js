@@ -124,6 +124,18 @@ const server = http.createServer((req, res) => {
 export { server };
 
 if (process.argv[1] && process.argv[1].endsWith('server.js')) {
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`\n======================================================`);
+      console.log(`   CỔNG ${PORT} ĐÃ ĐANG CHẠY!`);
+      console.log(`   👉 Bạn có thể mở trực tiếp: http://localhost:${PORT}`);
+      console.log(`======================================================\n`);
+      process.exit(0);
+    } else {
+      throw err;
+    }
+  });
+
   server.listen(PORT, () => {
     console.log(`\n======================================================`);
     console.log(`   ĐẢO ĐÈN LỒNG - 3D GAME SERVER CHẠY TẠI:`);
